@@ -27,11 +27,11 @@
         }
 
         .home-timezone {
-            background-color: #fff;
             padding: 15px;
             border-radius: 10px;
             margin-bottom: 15px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: background 0.5s ease;
         }
 
         .timezone-list {
@@ -44,12 +44,22 @@
         .timezone-card {
             display: inline-block;
             width: 200px;
-            background-color: #fff;
             border-radius: 10px;
             padding: 15px;
             margin-right: 10px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             vertical-align: top;
+            transition: background 0.5s ease;
+        }
+
+        .day {
+            background: linear-gradient(135deg, #87CEEB, #E0F6FF);
+            color: #333;
+        }
+
+        .night {
+            background: linear-gradient(135deg, #1a237e, #0d1b2a);
+            color: white;
         }
 
         .controls {
@@ -91,7 +101,7 @@
                 <select id="timezoneSelect"></select>
                 <button onclick="addTimezone()">Add Timezone</button>
             </div>
-            <div class="home-timezone">
+            <div class="home-timezone day" id="homeTimezoneSection">
                 <strong>Home Timezone:</strong>
                 <select id="homeTimezone" onchange="setHomeTimezone(this.value)"></select>
                 <div id="homeTime"></div>
@@ -105,12 +115,12 @@
         let homeTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         let selectedTimezones = [];
 
-        // Initialize timezones
         function init() {
             timezones = Intl.supportedValuesOf('timeZone');
             populateSelects();
             loadSavedData();
             setInterval(updateTimes, 1000);
+            updateTimes();
         }
 
         function populateSelects() {
@@ -173,19 +183,46 @@
             const now = new Date();
             
             // Update home time
-            document.getElementById('homeTime').textContent = 
-                now.toLocaleTimeString('en-US', { timeZone: homeTimezone });
+            const homeTimeElement = document.getElementById('homeTime');
+            const homeOptions = { 
+                timeZone: homeTimezone,
+                hour: 'numeric',
+                hour12: false 
+            };
             
+            const homeHour = parseInt(now.toLocaleString('en-US', homeOptions), 10);
+            document.getElementById('homeTimezoneSection').className = 
+                `home-timezone ${homeHour >= 6 && homeHour < 18 ? 'day' : 'night'}`;
+            
+            homeTimeElement.textContent = now.toLocaleTimeString('en-US', { timeZone: homeTimezone });
+
             // Update other timezones
             document.querySelectorAll('.timezone-card .time').forEach(el => {
                 const tz = el.dataset.tz;
-                el.textContent = now.toLocaleTimeString('en-US', { timeZone: tz });
+                const options = { 
+                    timeZone: tz,
+                    hour: 'numeric',
+                    hour12: false 
+                };
                 
+                const hour = parseInt(now.toLocaleString('en-US', options), 10);
+                const card = el.closest('.timezone-card');
+                
+                el.textContent = now.toLocaleTimeString('en-US', { timeZone: tz });
+                card.className = `timezone-card ${hour >= 6 && hour < 18 ? 'day' : 'night'}`;
+
                 // Calculate time difference
-                const homeTime = now.toLocaleString('en-US', { timeZone: homeTimezone, hour: 'numeric', hour12: false });
-                const tzTime = now.toLocaleString('en-US', { timeZone: tz, hour: 'numeric', hour12: false });
-                const diff = tzTime - homeTime;
-                el.nextElementSibling.textContent = diff === 0 ? '' : `${diff > 0 ? '+' : ''}${diff} hrs`;
+                const homeTime = parseInt(now.toLocaleString('en-US', { 
+                    timeZone: homeTimezone, 
+                    ...options 
+                }), 10);
+                
+                let diff = hour - homeTime;
+                if (diff > 12) diff -= 24;
+                if (diff < -12) diff += 24;
+                
+                el.nextElementSibling.textContent = diff === 0 ? '' : 
+                    `${diff > 0 ? '+' : ''}${diff} hrs`;
             });
         }
 
