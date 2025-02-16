@@ -91,22 +91,18 @@
   </header>
 
   <main>
-    <!-- Slider at the top -->
     <div id="time-slider">
       <label for="slider">Adjust Time (in GMT):</label>
       <input type="range" id="slider" min="0" max="47" value="24">
       <span id="slider-time">12:00 PM</span>
     </div>
 
-    <!-- Home timezone -->
     <div>
       <label for="home-timezone">Home Timezone:</label>
       <select id="home-timezone"></select>
     </div>
 
-    <!-- Timezone cards -->
     <div id="timezones">
-      <!-- Home timezone card -->
       <div class="timezone-card day" id="home-timezone-card">
         <span>Home Timezone</span>
         <div id="home-time">12:00 PM</div>
@@ -114,7 +110,6 @@
       </div>
     </div>
 
-    <!-- Add timezone section -->
     <footer>
       <label for="add-timezone">Add Timezone:</label>
       <select id="add-timezone"></select>
@@ -124,7 +119,7 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      const timezones = []; // Store selected timezones
+      const timezones = new Set(); // Use a Set to track selected timezones
       const homeTimezoneSelect = document.getElementById("home-timezone");
       const addTimezoneSelect = document.getElementById("add-timezone");
       const addButton = document.getElementById("add-button");
@@ -132,7 +127,6 @@
       const slider = document.getElementById("slider");
       const sliderTime = document.getElementById("slider-time");
 
-      // Populate timezone dropdowns
       function populateTimezones() {
         const timezoneOptions = Intl.supportedValuesOf("timeZone");
         timezoneOptions.forEach((tz) => {
@@ -146,14 +140,13 @@
         homeTimezoneSelect.value = Intl.DateTimeFormat().resolvedOptions().timeZone;
       }
 
-      // Add a timezone card
       function addTimezoneCard(timezone) {
-        if (timezones.includes(timezone)) {
+        if (timezones.has(timezone)) {
           alert("Timezone already added!");
           return;
         }
 
-        timezones.push(timezone);
+        timezones.add(timezone);
 
         const card = document.createElement("div");
         card.classList.add("timezone-card");
@@ -184,16 +177,11 @@
         timezonesDiv.appendChild(card);
       }
 
-      // Remove a timezone card
       function removeTimezone(timezone, card) {
-        const index = timezones.indexOf(timezone);
-        if (index > -1) {
-          timezones.splice(index, 1);
-          card.remove();
-        }
+        timezones.delete(timezone);
+        card.remove();
       }
 
-      // Update time on all cards when slider changes
       function updateTimes() {
         const cards = document.querySelectorAll(".timezone-card");
         cards.forEach((card) => {
@@ -205,7 +193,6 @@
         sliderTime.textContent = formatSliderTime(slider.value);
       }
 
-      // Update card background based on day/night
       function updateCardBackground(card, timezone, sliderValue) {
         const isDaytime = isDayTime(timezone, sliderValue);
         if (isDaytime) {
@@ -217,7 +204,6 @@
         }
       }
 
-      // Check if it is daytime for a timezone
       function isDayTime(timezone, sliderValue) {
         const now = new Date();
         now.setUTCMinutes(sliderValue * 30); // Convert slider value to minutes
@@ -228,7 +214,6 @@
         return hour >= 6 && hour < 18; // Daytime between 6 AM and 6 PM
       }
 
-      // Calculate time for a given timezone
       function calculateTime(timezone, sliderValue) {
         const now = new Date();
         now.setUTCMinutes(sliderValue * 30); // Convert slider value to minutes
@@ -239,7 +224,6 @@
         }).format(now);
       }
 
-      // Get GMT offset for a timezone
       function getGMTOffset(timezone) {
         const now = new Date();
         const offsetMinutes = -now.getTimezoneOffset() + new Date().toLocaleString("en-US", { timeZone: timezone }).getTimezoneOffset();
@@ -248,7 +232,6 @@
         return `(GMT${sign}${Math.abs(offsetHours)})`;
       }
 
-      // Format slider value as time
       function formatSliderTime(value) {
         const totalMinutes = value * 30;
         const hours = Math.floor(totalMinutes / 60);
@@ -258,7 +241,6 @@
         return `${formattedHours}:${minutes === 0 ? "00" : "30"} ${period}`;
       }
 
-      // Event listeners
       populateTimezones();
       slider.addEventListener("input", updateTimes);
 
@@ -269,7 +251,6 @@
         }
       });
 
-      // Set initial home timezone
       homeTimezoneSelect.addEventListener("change", () => {
         const homeTimezone = homeTimezoneSelect.value;
         const homeTimeElem = document.getElementById("home-time");
@@ -280,7 +261,6 @@
         updateCardBackground(document.getElementById("home-timezone-card"), homeTimezone, slider.value);
       });
 
-      // Set default home timezone
       const defaultTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       homeTimezoneSelect.value = defaultTimezone;
       document.getElementById("home-timezone-card").dataset.timezone = defaultTimezone;
