@@ -98,7 +98,7 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      const timezones = [];
+      const timezones = []; // Store selected timezones
       const homeTimezoneSelect = document.getElementById("home-timezone");
       const addTimezoneBtn = document.getElementById("add-timezone");
       const timezonesDiv = document.getElementById("timezones");
@@ -119,6 +119,13 @@
 
       // Add a timezone row
       function addTimezoneRow(timezone) {
+        if (timezones.includes(timezone)) {
+          alert("Timezone already added!");
+          return;
+        }
+
+        timezones.push(timezone);
+
         const row = document.createElement("div");
         row.classList.add("timezone-row");
         row.dataset.timezone = timezone;
@@ -133,8 +140,6 @@
         row.appendChild(label);
         row.appendChild(time);
         timezonesDiv.appendChild(row);
-
-        timezones.push(timezone);
       }
 
       // Update time on all rows when slider changes
@@ -172,8 +177,10 @@
       slider.addEventListener("input", updateTimes);
       addTimezoneBtn.addEventListener("click", () => {
         const timezone = prompt("Enter a timezone (e.g., America/New_York):");
-        if (timezone && !timezones.includes(timezone)) {
+        if (timezone && Intl.supportedValuesOf("timeZone").includes(timezone)) {
           addTimezoneRow(timezone);
+        } else {
+          alert("Invalid timezone! Please enter a valid timezone name.");
         }
       });
 
@@ -188,7 +195,7 @@
       // Set default home timezone
       const defaultTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       homeTimezoneSelect.value = defaultTimezone;
-      addTimezoneRow(defaultTimezone);
+      document.getElementById("home-timezone-row").dataset.timezone = defaultTimezone;
     });
   </script>
 </body>
