@@ -38,10 +38,19 @@
       border: 1px solid #ccc;
       border-radius: 8px;
       padding: 15px;
-      width: 180px;
+      width: 200px;
       box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
       text-align: center;
-      background-color: #f9f9f9;
+      transition: background-color 0.3s;
+    }
+
+    .timezone-card.day {
+      background-color: #ffffff;
+    }
+
+    .timezone-card.night {
+      background-color: #333333;
+      color: #ffffff;
     }
 
     .timezone-card .close-btn {
@@ -84,8 +93,8 @@
   <main>
     <!-- Slider at the top -->
     <div id="time-slider">
-      <label for="slider">Adjust Time:</label>
-      <input type="range" id="slider" min="0" max="23" value="12">
+      <label for="slider">Adjust Time (in GMT):</label>
+      <input type="range" id="slider" min="0" max="47" value="24">
       <span id="slider-time">12:00 PM</span>
     </div>
 
@@ -98,9 +107,10 @@
     <!-- Timezone cards -->
     <div id="timezones">
       <!-- Home timezone card -->
-      <div class="timezone-card" id="home-timezone-card">
+      <div class="timezone-card day" id="home-timezone-card">
         <span>Home Timezone</span>
         <div id="home-time">12:00 PM</div>
+        <div id="home-offset">(GMT+0)</div>
       </div>
     </div>
 
@@ -161,9 +171,16 @@
         time.classList.add("timezone-time");
         time.textContent = calculateTime(timezone, slider.value);
 
+        const offset = document.createElement("div");
+        offset.textContent = getGMTOffset(timezone);
+
         card.appendChild(closeButton);
         card.appendChild(label);
         card.appendChild(time);
+        card.appendChild(offset);
+
+        updateCardBackground(card, timezone, slider.value);
+
         timezonesDiv.appendChild(card);
       }
 
@@ -183,14 +200,38 @@
           const timezone = card.dataset.timezone;
           const timeElem = card.querySelector(".timezone-time");
           timeElem.textContent = calculateTime(timezone, slider.value);
+          updateCardBackground(card, timezone, slider.value);
         });
         sliderTime.textContent = formatSliderTime(slider.value);
+      }
+
+      // Update card background based on day/night
+      function updateCardBackground(card, timezone, sliderValue) {
+        const isDaytime = isDayTime(timezone, sliderValue);
+        if (isDaytime) {
+          card.classList.add("day");
+          card.classList.remove("night");
+        } else {
+          card.classList.add("night");
+          card.classList.remove("day");
+        }
+      }
+
+      // Check if it is daytime for a timezone
+      function isDayTime(timezone, sliderValue) {
+        const now = new Date();
+        now.setUTCMinutes(sliderValue * 30); // Convert slider value to minutes
+        const hour = new Intl.DateTimeFormat("en-US", {
+          timeZone: timezone,
+          hour: "numeric",
+        }).format(now);
+        return hour >= 6 && hour < 18; // Daytime between 6 AM and 6 PM
       }
 
       // Calculate time for a given timezone
       function calculateTime(timezone, sliderValue) {
         const now = new Date();
-        now.setUTCHours(parseInt(sliderValue, 10), 0, 0, 0);
+        now.setUTCMinutes(sliderValue * 30); // Convert slider value to minutes
         return new Intl.DateTimeFormat("en-US", {
           timeZone: timezone,
           hour: "numeric",
@@ -198,12 +239,23 @@
         }).format(now);
       }
 
+      // Get GMT offset for a timezone
+      function getGMTOffset(timezone) {
+        const now = new Date();
+        const offsetMinutes = -now.getTimezoneOffset() + new Date().toLocaleString("en-US", { timeZone: timezone }).getTimezoneOffset();
+        const offsetHours = offsetMinutes / 60;
+        const sign = offsetHours >= 0 ? "+" : "-";
+        return `(GMT${sign}${Math.abs(offsetHours)})`;
+      }
+
       // Format slider value as time
       function formatSliderTime(value) {
-        const hours = parseInt(value, 10);
+        const totalMinutes = value * 30;
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
         const period = hours >= 12 ? "PM" : "AM";
         const formattedHours = hours % 12 || 12;
-        return `${formattedHours}:00 ${period}`;
+        return `${formattedHours}:${minutes === 0 ? "00" : "30"} ${period}`;
       }
 
       // Event listeners
@@ -222,7 +274,10 @@
         const homeTimezone = homeTimezoneSelect.value;
         const homeTimeElem = document.getElementById("home-time");
         homeTimeElem.textContent = calculateTime(homeTimezone, slider.value);
+        const homeOffsetElem = document.getElementById("home-offset");
+        homeOffsetElem.textContent = getGMTOffset(homeTimezone);
         document.getElementById("home-timezone-card").dataset.timezone = homeTimezone;
+        updateCardBackground(document.getElementById("home-timezone-card"), homeTimezone, slider.value);
       });
 
       // Set default home timezone
