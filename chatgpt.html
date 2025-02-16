@@ -22,53 +22,56 @@
       padding: 20px;
     }
 
+    #time-slider {
+      margin-bottom: 20px;
+    }
+
     #timezones {
-      margin: 20px 0;
-    }
-
-    .timezone-row {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px;
-      border-bottom: 1px solid #ccc;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
     }
 
-    .timezone-row span {
-      flex: 1;
-      text-align: left;
-    }
-
-    .timezone-time {
-      flex: 1;
+    .timezone-card {
+      position: relative;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 15px;
+      width: 180px;
+      box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
       text-align: center;
+      background-color: #f9f9f9;
     }
 
-    .remove-button {
-      flex: 1;
-      text-align: right;
+    .timezone-card .close-btn {
+      position: absolute;
+      top: 5px;
+      right: 10px;
+      font-size: 18px;
+      font-weight: bold;
+      color: red;
+      cursor: pointer;
+    }
+
+    .timezone-card .close-btn:hover {
+      color: darkred;
     }
 
     input[type="range"] {
       width: 100%;
-      margin: 20px 0;
     }
 
-    button {
+    button, select {
+      margin: 10px 5px;
       padding: 10px 15px;
       font-size: 16px;
       cursor: pointer;
-      margin: 5px;
     }
 
     @media (max-width: 768px) {
-      .timezone-row {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-
-      .timezone-time, .remove-button {
-        text-align: left;
+      .timezone-card {
+        width: 100%;
       }
     }
   </style>
@@ -76,26 +79,32 @@
 <body>
   <header>
     <h1>World Time Comparison Tool</h1>
-    <div>
-      <label for="home-timezone">Home Timezone:</label>
-      <select id="home-timezone"></select>
-    </div>
   </header>
 
   <main>
-    <div id="timezones">
-      <div class="timezone-row" id="home-timezone-row">
-        <span>Home Timezone</span>
-        <span id="home-time" class="timezone-time">12:00 PM</span>
-      </div>
-    </div>
-
+    <!-- Slider at the top -->
     <div id="time-slider">
       <label for="slider">Adjust Time:</label>
       <input type="range" id="slider" min="0" max="23" value="12">
       <span id="slider-time">12:00 PM</span>
     </div>
 
+    <!-- Home timezone -->
+    <div>
+      <label for="home-timezone">Home Timezone:</label>
+      <select id="home-timezone"></select>
+    </div>
+
+    <!-- Timezone cards -->
+    <div id="timezones">
+      <!-- Home timezone card -->
+      <div class="timezone-card" id="home-timezone-card">
+        <span>Home Timezone</span>
+        <div id="home-time">12:00 PM</div>
+      </div>
+    </div>
+
+    <!-- Add timezone section -->
     <footer>
       <label for="add-timezone">Add Timezone:</label>
       <select id="add-timezone"></select>
@@ -127,8 +136,8 @@
         homeTimezoneSelect.value = Intl.DateTimeFormat().resolvedOptions().timeZone;
       }
 
-      // Add a timezone row
-      function addTimezoneRow(timezone) {
+      // Add a timezone card
+      function addTimezoneCard(timezone) {
         if (timezones.includes(timezone)) {
           alert("Timezone already added!");
           return;
@@ -136,43 +145,43 @@
 
         timezones.push(timezone);
 
-        const row = document.createElement("div");
-        row.classList.add("timezone-row");
-        row.dataset.timezone = timezone;
+        const card = document.createElement("div");
+        card.classList.add("timezone-card");
+        card.dataset.timezone = timezone;
+
+        const closeButton = document.createElement("span");
+        closeButton.textContent = "×";
+        closeButton.classList.add("close-btn");
+        closeButton.addEventListener("click", () => removeTimezone(timezone, card));
 
         const label = document.createElement("span");
         label.textContent = timezone;
 
-        const time = document.createElement("span");
+        const time = document.createElement("div");
         time.classList.add("timezone-time");
         time.textContent = calculateTime(timezone, slider.value);
 
-        const removeButton = document.createElement("button");
-        removeButton.textContent = "Remove";
-        removeButton.classList.add("remove-button");
-        removeButton.addEventListener("click", () => removeTimezone(timezone, row));
-
-        row.appendChild(label);
-        row.appendChild(time);
-        row.appendChild(removeButton);
-        timezonesDiv.appendChild(row);
+        card.appendChild(closeButton);
+        card.appendChild(label);
+        card.appendChild(time);
+        timezonesDiv.appendChild(card);
       }
 
-      // Remove a timezone
-      function removeTimezone(timezone, row) {
+      // Remove a timezone card
+      function removeTimezone(timezone, card) {
         const index = timezones.indexOf(timezone);
         if (index > -1) {
           timezones.splice(index, 1);
-          row.remove();
+          card.remove();
         }
       }
 
-      // Update time on all rows when slider changes
+      // Update time on all cards when slider changes
       function updateTimes() {
-        const rows = document.querySelectorAll(".timezone-row");
-        rows.forEach((row) => {
-          const timezone = row.dataset.timezone;
-          const timeElem = row.querySelector(".timezone-time");
+        const cards = document.querySelectorAll(".timezone-card");
+        cards.forEach((card) => {
+          const timezone = card.dataset.timezone;
+          const timeElem = card.querySelector(".timezone-time");
           timeElem.textContent = calculateTime(timezone, slider.value);
         });
         sliderTime.textContent = formatSliderTime(slider.value);
@@ -204,7 +213,7 @@
       addButton.addEventListener("click", () => {
         const selectedTimezone = addTimezoneSelect.value;
         if (selectedTimezone) {
-          addTimezoneRow(selectedTimezone);
+          addTimezoneCard(selectedTimezone);
         }
       });
 
@@ -213,13 +222,13 @@
         const homeTimezone = homeTimezoneSelect.value;
         const homeTimeElem = document.getElementById("home-time");
         homeTimeElem.textContent = calculateTime(homeTimezone, slider.value);
-        document.getElementById("home-timezone-row").dataset.timezone = homeTimezone;
+        document.getElementById("home-timezone-card").dataset.timezone = homeTimezone;
       });
 
       // Set default home timezone
       const defaultTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       homeTimezoneSelect.value = defaultTimezone;
-      document.getElementById("home-timezone-row").dataset.timezone = defaultTimezone;
+      document.getElementById("home-timezone-card").dataset.timezone = defaultTimezone;
     });
   </script>
 </body>
