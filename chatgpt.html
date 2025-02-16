@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>World Time Comparison Tool</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      max-width: 600px;
+      margin: auto;
+    }
+
+    header, footer {
+      padding: 20px;
+      text-align: center;
+    }
+
+    main {
+      padding: 20px;
+    }
+
+    #timezones {
+      margin: 20px 0;
+    }
+
+    .timezone-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      border-bottom: 1px solid #ccc;
+    }
+
+    .timezone-row span {
+      flex: 1;
+      text-align: left;
+    }
+
+    .timezone-time {
+      flex: 1;
+      text-align: right;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      margin: 20px 0;
+    }
+
+    button {
+      padding: 10px 15px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 5px;
+    }
+
+    @media (max-width: 768px) {
+      .timezone-row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .timezone-time {
+        text-align: left;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>World Time Comparison Tool</h1>
+    <div>
+      <label for="home-timezone">Home Timezone:</label>
+      <select id="home-timezone"></select>
+    </div>
+  </header>
+
+  <main>
+    <div id="timezones">
+      <div class="timezone-row" id="home-timezone-row">
+        <span>Home Timezone</span>
+        <span id="home-time" class="timezone-time">12:00 PM</span>
+      </div>
+    </div>
+
+    <div id="time-slider">
+      <label for="slider">Adjust Time:</label>
+      <input type="range" id="slider" min="0" max="23" value="12">
+      <span id="slider-time">12:00 PM</span>
+    </div>
+
+    <footer>
+      <button id="add-timezone">Add Timezone</button>
+    </footer>
+  </main>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const timezones = [];
+      const homeTimezoneSelect = document.getElementById("home-timezone");
+      const addTimezoneBtn = document.getElementById("add-timezone");
+      const timezonesDiv = document.getElementById("timezones");
+      const slider = document.getElementById("slider");
+      const sliderTime = document.getElementById("slider-time");
+
+      // Populate home timezone dropdown
+      function populateTimezones() {
+        const timezoneOptions = Intl.supportedValuesOf("timeZone");
+        timezoneOptions.forEach((tz) => {
+          const option = document.createElement("option");
+          option.value = tz;
+          option.textContent = tz;
+          homeTimezoneSelect.appendChild(option);
+        });
+        homeTimezoneSelect.value = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      }
+
+      // Add a timezone row
+      function addTimezoneRow(timezone) {
+        const row = document.createElement("div");
+        row.classList.add("timezone-row");
+        row.dataset.timezone = timezone;
+
+        const label = document.createElement("span");
+        label.textContent = timezone;
+
+        const time = document.createElement("span");
+        time.classList.add("timezone-time");
+        time.textContent = calculateTime(timezone, slider.value);
+
+        row.appendChild(label);
+        row.appendChild(time);
+        timezonesDiv.appendChild(row);
+
+        timezones.push(timezone);
+      }
+
+      // Update time on all rows when slider changes
+      function updateTimes() {
+        const rows = document.querySelectorAll(".timezone-row");
+        rows.forEach((row) => {
+          const timezone = row.dataset.timezone;
+          const timeElem = row.querySelector(".timezone-time");
+          timeElem.textContent = calculateTime(timezone, slider.value);
+        });
+        sliderTime.textContent = formatSliderTime(slider.value);
+      }
+
+      // Calculate time for a given timezone
+      function calculateTime(timezone, sliderValue) {
+        const now = new Date();
+        now.setUTCHours(parseInt(sliderValue, 10), 0, 0, 0);
+        return new Intl.DateTimeFormat("en-US", {
+          timeZone: timezone,
+          hour: "numeric",
+          minute: "numeric",
+        }).format(now);
+      }
+
+      // Format slider value as time
+      function formatSliderTime(value) {
+        const hours = parseInt(value, 10);
+        const period = hours >= 12 ? "PM" : "AM";
+        const formattedHours = hours % 12 || 12;
+        return `${formattedHours}:00 ${period}`;
+      }
+
+      // Event listeners
+      populateTimezones();
+      slider.addEventListener("input", updateTimes);
+      addTimezoneBtn.addEventListener("click", () => {
+        const timezone = prompt("Enter a timezone (e.g., America/New_York):");
+        if (timezone && !timezones.includes(timezone)) {
+          addTimezoneRow(timezone);
+        }
+      });
+
+      // Set initial home timezone
+      homeTimezoneSelect.addEventListener("change", () => {
+        const homeTimezone = homeTimezoneSelect.value;
+        const homeTimeElem = document.getElementById("home-time");
+        homeTimeElem.textContent = calculateTime(homeTimezone, slider.value);
+        document.getElementById("home-timezone-row").dataset.timezone = homeTimezone;
+      });
+
+      // Set default home timezone
+      const defaultTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      homeTimezoneSelect.value = defaultTimezone;
+      addTimezoneRow(defaultTimezone);
+    });
+  </script>
+</body>
+</html>
