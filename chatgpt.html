@@ -41,6 +41,11 @@
 
     .timezone-time {
       flex: 1;
+      text-align: center;
+    }
+
+    .remove-button {
+      flex: 1;
       text-align: right;
     }
 
@@ -56,20 +61,13 @@
       margin: 5px;
     }
 
-    select {
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      font-size: 16px;
-    }
-
     @media (max-width: 768px) {
       .timezone-row {
         flex-direction: column;
         align-items: flex-start;
       }
 
-      .timezone-time {
+      .timezone-time, .remove-button {
         text-align: left;
       }
     }
@@ -99,11 +97,9 @@
     </div>
 
     <footer>
-      <div>
-        <label for="add-timezone">Add Timezone:</label>
-        <select id="add-timezone"></select>
-      </div>
-      <button id="add-timezone-btn">Add</button>
+      <label for="add-timezone">Add Timezone:</label>
+      <select id="add-timezone"></select>
+      <button id="add-button">Add</button>
     </footer>
   </main>
 
@@ -112,7 +108,7 @@
       const timezones = []; // Store selected timezones
       const homeTimezoneSelect = document.getElementById("home-timezone");
       const addTimezoneSelect = document.getElementById("add-timezone");
-      const addTimezoneBtn = document.getElementById("add-timezone-btn");
+      const addButton = document.getElementById("add-button");
       const timezonesDiv = document.getElementById("timezones");
       const slider = document.getElementById("slider");
       const sliderTime = document.getElementById("slider-time");
@@ -122,17 +118,12 @@
         const timezoneOptions = Intl.supportedValuesOf("timeZone");
         timezoneOptions.forEach((tz) => {
           const option1 = document.createElement("option");
-          option1.value = tz;
-          option1.textContent = tz;
-          homeTimezoneSelect.appendChild(option1);
-
           const option2 = document.createElement("option");
-          option2.value = tz;
-          option2.textContent = tz;
+          option1.value = option2.value = tz;
+          option1.textContent = option2.textContent = tz;
+          homeTimezoneSelect.appendChild(option1);
           addTimezoneSelect.appendChild(option2);
         });
-
-        // Set default home timezone to system timezone
         homeTimezoneSelect.value = Intl.DateTimeFormat().resolvedOptions().timeZone;
       }
 
@@ -156,9 +147,24 @@
         time.classList.add("timezone-time");
         time.textContent = calculateTime(timezone, slider.value);
 
+        const removeButton = document.createElement("button");
+        removeButton.textContent = "Remove";
+        removeButton.classList.add("remove-button");
+        removeButton.addEventListener("click", () => removeTimezone(timezone, row));
+
         row.appendChild(label);
         row.appendChild(time);
+        row.appendChild(removeButton);
         timezonesDiv.appendChild(row);
+      }
+
+      // Remove a timezone
+      function removeTimezone(timezone, row) {
+        const index = timezones.indexOf(timezone);
+        if (index > -1) {
+          timezones.splice(index, 1);
+          row.remove();
+        }
       }
 
       // Update time on all rows when slider changes
@@ -194,9 +200,12 @@
       // Event listeners
       populateTimezones();
       slider.addEventListener("input", updateTimes);
-      addTimezoneBtn.addEventListener("click", () => {
+
+      addButton.addEventListener("click", () => {
         const selectedTimezone = addTimezoneSelect.value;
-        addTimezoneRow(selectedTimezone);
+        if (selectedTimezone) {
+          addTimezoneRow(selectedTimezone);
+        }
       });
 
       // Set initial home timezone
