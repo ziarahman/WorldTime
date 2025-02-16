@@ -66,7 +66,7 @@
             margin-bottom: 15px;
         }
 
-        select, button {
+        select, button, input {
             padding: 8px;
             margin: 5px;
             border-radius: 5px;
@@ -86,6 +86,11 @@
             margin-top: 10px;
         }
 
+        #homeTimezone {
+            width: 100%;
+            margin: 5px 0;
+        }
+
         @media (max-width: 480px) {
             .timezone-card {
                 width: 160px;
@@ -103,7 +108,9 @@
             </div>
             <div class="home-timezone day" id="homeTimezoneSection">
                 <strong>Home Timezone:</strong>
-                <select id="homeTimezone" onchange="setHomeTimezone(this.value)"></select>
+                <input id="homeTimezone" list="timezoneOptions" placeholder="Search timezone..." 
+                       onchange="setHomeTimezone(this.value)">
+                <datalist id="timezoneOptions"></datalist>
                 <div id="homeTime"></div>
             </div>
         </div>
@@ -117,27 +124,28 @@
 
         function init() {
             timezones = Intl.supportedValuesOf('timeZone');
-            populateSelects();
+            populateTimezoneOptions();
             loadSavedData();
             setInterval(updateTimes, 1000);
             updateTimes();
         }
 
-        function populateSelects() {
+        function populateTimezoneOptions() {
+            const datalist = document.getElementById('timezoneOptions');
             const tzSelect = document.getElementById('timezoneSelect');
-            const homeSelect = document.getElementById('homeTimezone');
             
             timezones.forEach(tz => {
+                // Add to datalist
                 const option = document.createElement('option');
                 option.value = tz;
-                option.textContent = tz;
-                tzSelect.appendChild(option);
+                datalist.appendChild(option);
                 
-                const homeOption = option.cloneNode(true);
-                homeSelect.appendChild(homeOption);
+                // Add to regular select
+                const selectOption = document.createElement('option');
+                selectOption.value = tz;
+                selectOption.textContent = tz;
+                tzSelect.appendChild(selectOption);
             });
-            
-            homeSelect.value = homeTimezone;
         }
 
         function addTimezone() {
@@ -157,6 +165,11 @@
         }
 
         function setHomeTimezone(tz) {
+            if (!timezones.includes(tz)) {
+                alert('Invalid timezone. Please select from the list.');
+                document.getElementById('homeTimezone').value = homeTimezone;
+                return;
+            }
             homeTimezone = tz;
             saveToLocalStorage();
             updateTimes();
@@ -236,7 +249,7 @@
             const savedHome = localStorage.getItem('homeTimezone');
             
             if (savedTimezones) selectedTimezones = JSON.parse(savedTimezones);
-            if (savedHome) homeTimezone = savedHome;
+            if (savedHome && timezones.includes(savedHome)) homeTimezone = savedHome;
             
             document.getElementById('homeTimezone').value = homeTimezone;
             renderTimezoneCards();
