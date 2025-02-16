@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Time Comparison</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            padding: 10px;
+            background-color: #f0f0f0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            margin-bottom: 20px;
+        }
+
+        .home-timezone {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .timezone-list {
+            overflow-x: auto;
+            white-space: nowrap;
+            padding-bottom: 10px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .timezone-card {
+            display: inline-block;
+            width: 200px;
+            background-color: #fff;
+            border-radius: 10px;
+            padding: 15px;
+            margin-right: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            vertical-align: top;
+        }
+
+        .controls {
+            margin-bottom: 15px;
+        }
+
+        select, button {
+            padding: 8px;
+            margin: 5px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .remove-btn {
+            background-color: #ff4444;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 480px) {
+            .timezone-card {
+                width: 160px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>World Time Comparison</h1>
+            <div class="controls">
+                <select id="timezoneSelect"></select>
+                <button onclick="addTimezone()">Add Timezone</button>
+            </div>
+            <div class="home-timezone">
+                <strong>Home Timezone:</strong>
+                <select id="homeTimezone" onchange="setHomeTimezone(this.value)"></select>
+                <div id="homeTime"></div>
+            </div>
+        </div>
+        <div class="timezone-list" id="timezoneList"></div>
+    </div>
+
+    <script>
+        let timezones = [];
+        let homeTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        let selectedTimezones = [];
+
+        // Initialize timezones
+        function init() {
+            timezones = Intl.supportedValuesOf('timeZone');
+            populateSelects();
+            loadSavedData();
+            setInterval(updateTimes, 1000);
+        }
+
+        function populateSelects() {
+            const tzSelect = document.getElementById('timezoneSelect');
+            const homeSelect = document.getElementById('homeTimezone');
+            
+            timezones.forEach(tz => {
+                const option = document.createElement('option');
+                option.value = tz;
+                option.textContent = tz;
+                tzSelect.appendChild(option);
+                
+                const homeOption = option.cloneNode(true);
+                homeSelect.appendChild(homeOption);
+            });
+            
+            homeSelect.value = homeTimezone;
+        }
+
+        function addTimezone() {
+            const select = document.getElementById('timezoneSelect');
+            const tz = select.value;
+            if (!selectedTimezones.includes(tz)) {
+                selectedTimezones.push(tz);
+                renderTimezoneCards();
+                saveToLocalStorage();
+            }
+        }
+
+        function removeTimezone(tz) {
+            selectedTimezones = selectedTimezones.filter(item => item !== tz);
+            renderTimezoneCards();
+            saveToLocalStorage();
+        }
+
+        function setHomeTimezone(tz) {
+            homeTimezone = tz;
+            saveToLocalStorage();
+            updateTimes();
+        }
+
+        function renderTimezoneCards() {
+            const container = document.getElementById('timezoneList');
+            container.innerHTML = '';
+            
+            selectedTimezones.forEach(tz => {
+                const card = document.createElement('div');
+                card.className = 'timezone-card';
+                card.innerHTML = `
+                    <h3>${tz.split('/')[1] || tz}</h3>
+                    <div class="time" data-tz="${tz}"></div>
+                    <div class="diff"></div>
+                    <button class="remove-btn" onclick="removeTimezone('${tz}')">Remove</button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function updateTimes() {
+            const now = new Date();
+            
+            // Update home time
+            document.getElementById('homeTime').textContent = 
+                now.toLocaleTimeString('en-US', { timeZone: homeTimezone });
+            
+            // Update other timezones
+            document.querySelectorAll('.timezone-card .time').forEach(el => {
+                const tz = el.dataset.tz;
+                el.textContent = now.toLocaleTimeString('en-US', { timeZone: tz });
+                
+                // Calculate time difference
+                const homeTime = now.toLocaleString('en-US', { timeZone: homeTimezone, hour: 'numeric', hour12: false });
+                const tzTime = now.toLocaleString('en-US', { timeZone: tz, hour: 'numeric', hour12: false });
+                const diff = tzTime - homeTime;
+                el.nextElementSibling.textContent = diff === 0 ? '' : `${diff > 0 ? '+' : ''}${diff} hrs`;
+            });
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('selectedTimezones', JSON.stringify(selectedTimezones));
+            localStorage.setItem('homeTimezone', homeTimezone);
+        }
+
+        function loadSavedData() {
+            const savedTimezones = localStorage.getItem('selectedTimezones');
+            const savedHome = localStorage.getItem('homeTimezone');
+            
+            if (savedTimezones) selectedTimezones = JSON.parse(savedTimezones);
+            if (savedHome) homeTimezone = savedHome;
+            
+            document.getElementById('homeTimezone').value = homeTimezone;
+            renderTimezoneCards();
+        }
+
+        init();
+    </script>
+</body>
+</html>
