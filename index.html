@@ -56,7 +56,8 @@
             border: none;
             font-size: 20px;
             cursor: pointer;
-            color: inherit;
+            color: red;
+            font-weight: bold;
         }
 
         .day {
@@ -93,6 +94,17 @@
             margin: 10px 0;
         }
 
+        .set-btn {
+            margin-left: 10px;
+            padding: 5px 10px;
+            font-size: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
         .offset {
             font-size: 0.9em;
             color: inherit;
@@ -110,6 +122,8 @@
                        onchange="setHomeTimezone(this.value)">
                 <datalist id="timezoneOptions"></datalist>
                 <div id="homeTime" class="timezone-info"></div>
+                <button class="set-btn" onclick="toggleDateTimePicker()">SET</button>
+                <input type="datetime-local" id="homeDateTimePicker" style="display:none;" onchange="setCustomTime()">
             </div>
             
             <div class="controls">
@@ -124,6 +138,7 @@
         let timezones = [];
         let homeTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         let selectedTimezones = [];
+        let customDateTime = null; 
 
         function init() {
             timezones = Intl.supportedValuesOf('timeZone');
@@ -170,6 +185,16 @@
             updateTimes();
         }
 
+        function toggleDateTimePicker() {
+            const picker = document.getElementById('homeDateTimePicker');
+            picker.style.display = picker.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function setCustomTime() {
+            customDateTime = new Date(document.getElementById('homeDateTimePicker').value);
+            updateTimes();
+        }
+
         function renderTimezoneCards() {
             const container = document.getElementById('timezoneList');
             container.innerHTML = '';
@@ -180,68 +205,28 @@
                 card.innerHTML = `
                     <button class="remove-btn" onclick="removeTimezone('${tz}')">&times;</button>
                     <h3>${tz.split('/').pop().replace(/_/g, ' ')}</h3>
-                    <div class="offset"></div>
                     <div class="time timezone-info" data-tz="${tz}"></div>
-                    <div class="diff"></div>
                 `;
                 container.appendChild(card);
             });
         }
 
-        function getTimezoneOffset(tz) {
-            const date = new Date();
-            const options = {
-                timeZone: tz,
-                timeZoneName: 'shortOffset'
-            };
-            return date.toLocaleString('en-US', options).split(', ')[1];
-        }
-
         function updateTimes() {
-            const now = new Date();
+            const now = customDateTime ? new Date(customDateTime) : new Date();
             
             // Update home time
             const homeTimeElement = document.getElementById('homeTime');
-            const homeOptions = { 
-                timeZone: homeTimezone,
-                hour: 'numeric',
-                hour12: false 
-            };
-            
-            const homeHour = parseInt(now.toLocaleString('en-US', homeOptions), 10);
+            const homeHour = now.toLocaleString('en-US', { timeZone: homeTimezone, hour: 'numeric', hour12: false });
+
             document.getElementById('homeTimezoneSection').className = 
                 `home-timezone ${homeHour >= 6 && homeHour < 18 ? 'day' : 'night'}`;
-            
-            homeTimeElement.textContent = now.toLocaleTimeString('en-US', { timeZone: homeTimezone });
+
+            homeTimeElement.textContent = now.toLocaleString('en-US', { timeZone: homeTimezone });
 
             // Update other timezones
-            document.querySelectorAll('.timezone-card').forEach(card => {
-                const tz = card.querySelector('.time').dataset.tz;
-                const options = { 
-                    timeZone: tz,
-                    hour: 'numeric',
-                    hour12: false 
-                };
-                
-                const hour = parseInt(now.toLocaleString('en-US', options), 10);
-                card.className = `timezone-card ${hour >= 6 && hour < 18 ? 'day' : 'night'}`;
-                
-                // Update time and offset
-                card.querySelector('.time').textContent = now.toLocaleTimeString('en-US', { timeZone: tz });
-                card.querySelector('.offset').textContent = getTimezoneOffset(tz);
-
-                // Calculate time difference
-                const homeTime = parseInt(now.toLocaleString('en-US', { 
-                    timeZone: homeTimezone, 
-                    ...options 
-                }), 10);
-                
-                let diff = hour - homeTime;
-                if (diff > 12) diff -= 24;
-                if (diff < -12) diff += 24;
-                
-                card.querySelector('.diff').textContent = diff === 0 ? '' : 
-                    `${diff > 0 ? '+' : ''}${diff} hrs from home`;
+            document.querySelectorAll('.timezone-card .time').forEach(el => {
+                const tz = el.dataset.tz;
+                el.textContent = now.toLocaleString('en-US', { timeZone: tz });
             });
         }
 
