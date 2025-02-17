@@ -126,7 +126,7 @@
                        onchange="setHomeTimezone(this.value)">
                 <datalist id="timezoneOptions"></datalist>
                 <div id="homeTime" class="timezone-info"></div>
-                <button class="set-btn" onclick="toggleDateTimePicker()">SET</button>
+                <button class="set-btn" onclick="toggleDateTimePicker()">SET DATE & TIME</button>
                 <input type="datetime-local" id="homeDateTimePicker" style="display:none;" onchange="setCustomTime()">
             </div>
             
@@ -192,10 +192,12 @@
         function toggleDateTimePicker() {
             const picker = document.getElementById('homeDateTimePicker');
             const homeTimeElement = document.getElementById('homeTime');
-            
+
             if (picker.style.display === 'none') {
                 picker.style.display = 'block';
-                picker.value = new Date().toISOString().slice(0, 16);
+                let now = new Date();
+                let homeTime = now.toLocaleString('sv-SE', { timeZone: homeTimezone }).replace(" ", "T");
+                picker.value = homeTime;
                 homeTimeElement.style.display = 'none';
             } else {
                 picker.style.display = 'none';
@@ -205,7 +207,7 @@
 
         function setCustomTime() {
             customDateTime = new Date(document.getElementById('homeDateTimePicker').value);
-            
+
             document.getElementById('homeDateTimePicker').style.display = 'none';
             document.getElementById('homeTime').style.display = 'block';
 
@@ -267,7 +269,7 @@
             const savedHome = localStorage.getItem('homeTimezone');
 
             if (savedTimezones) selectedTimezones = JSON.parse(savedTimezones);
-            if (savedHome && timezones.includes(savedHome)) homeTimezone = savedHome;
+            if (savedHome) homeTimezone = savedHome;
 
             document.getElementById('homeTimezone').value = homeTimezone;
             renderTimezoneCards();
