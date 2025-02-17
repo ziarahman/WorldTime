@@ -141,8 +141,14 @@
         function init() {
             timezones = Intl.supportedValuesOf('timeZone');
             populateTimezoneOptions();
+            detectUserTimezone();
             loadSavedData();
             setInterval(updateTimes, 1000);
+            updateTimes();
+        }
+
+        function detectUserTimezone() {
+            document.getElementById('homeTimezone').value = homeTimezone;
             updateTimes();
         }
 
@@ -172,21 +178,40 @@
             saveToLocalStorage();
         }
 
+        function setHomeTimezone(tz) {
+            if (!timezones.includes(tz)) {
+                alert('Invalid timezone. Please select from the list.');
+                return;
+            }
+            homeTimezone = tz;
+            document.getElementById('homeTimezone').value = homeTimezone;
+            customDateTime = new Date();
+            updateTimes();
+        }
+
+        function toggleDateTimePicker() {
+            const picker = document.getElementById('homeDateTimePicker');
+            picker.style.display = picker.style.display === 'none' ? 'block' : 'none';
+
+            let now = new Date();
+            let homeTime = now.toLocaleString('sv-SE', { timeZone: homeTimezone }).replace(" ", "T");
+            picker.value = homeTime;
+        }
+
         function setCustomTime() {
             customDateTime = new Date(document.getElementById('homeDateTimePicker').value);
-            document.getElementById('homeDateTimePicker').style.display = 'none';
-            document.getElementById('homeTime').style.display = 'block';
             updateTimes();
         }
 
         function updateTimes() {
             const now = customDateTime ? new Date(customDateTime) : new Date();
 
+            document.getElementById('homeTime').textContent = now.toLocaleString('en-US', { timeZone: homeTimezone });
+
             document.querySelectorAll('.timezone-card .time').forEach(el => {
                 const tz = el.dataset.tz;
                 const tzTime = new Date(now.toLocaleString('en-US', { timeZone: tz }));
                 const tzHour = tzTime.getHours();
-
                 el.textContent = tzTime.toLocaleString('en-US', { timeZone: tz });
 
                 const card = el.closest('.timezone-card');
