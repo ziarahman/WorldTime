@@ -187,6 +187,7 @@
             document.getElementById('homeTimezone').value = homeTimezone;
             customDateTime = new Date();
             updateTimes();
+            renderTimezoneCards(); // Ensure updates apply correctly
         }
 
         function toggleDateTimePicker() {
@@ -222,6 +223,24 @@
                 const card = el.closest('.timezone-card');
                 card.className = `timezone-card ${now.getHours() >= 6 && now.getHours() < 18 ? 'day' : 'night'}`;
             });
+        }
+
+        function renderTimezoneCards() {
+            const container = document.getElementById('timezoneList');
+            container.innerHTML = '';
+
+            selectedTimezones.forEach(tz => {
+                const card = document.createElement('div');
+                card.className = 'timezone-card';
+                card.innerHTML = `
+                    <button class="remove-btn" onclick="removeTimezone('${tz}')">&times;</button>
+                    <h3>${tz.split('/').pop().replace(/_/g, ' ')}</h3>
+                    <div class="time timezone-info" data-tz="${tz}"></div>
+                `;
+                container.appendChild(card);
+            });
+
+            updateTimes();
         }
 
         init();
