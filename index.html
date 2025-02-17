@@ -188,6 +188,7 @@
             customDateTime = new Date();
             updateTimes();
             renderTimezoneCards(); // Ensure updates apply correctly
+            saveToLocalStorage();
         }
 
         function toggleDateTimePicker() {
@@ -201,6 +202,7 @@
         function setCustomTime() {
             customDateTime = new Date(document.getElementById('homeDateTimePicker').value);
             updateTimes();
+            saveToLocalStorage();
         }
 
         function updateTimes() {
@@ -214,6 +216,8 @@
 
             document.querySelectorAll('.timezone-card .time').forEach(el => {
                 const tz = el.dataset.tz;
+                // Get the current time in the timezone for proper day/night classification.
+                const localNow = new Date(now.toLocaleString('en-US', { timeZone: tz }));
                 el.textContent = new Intl.DateTimeFormat('en-US', { 
                     timeZone: tz, 
                     dateStyle: 'full', 
@@ -221,7 +225,7 @@
                 }).format(now);
 
                 const card = el.closest('.timezone-card');
-                card.className = `timezone-card ${now.getHours() >= 6 && now.getHours() < 18 ? 'day' : 'night'}`;
+                card.className = `timezone-card ${localNow.getHours() >= 6 && localNow.getHours() < 18 ? 'day' : 'night'}`;
             });
         }
 
@@ -242,6 +246,39 @@
 
             updateTimes();
         }
+
+        // --- Added Local Storage functions ---
+        function saveToLocalStorage() {
+            const data = {
+                selectedTimezones,
+                homeTimezone,
+                customDateTime: customDateTime ? customDateTime.toISOString() : null
+            };
+            localStorage.setItem('worldTimeData', JSON.stringify(data));
+        }
+
+        function loadSavedData() {
+            const savedData = localStorage.getItem('worldTimeData');
+            if (savedData) {
+                try {
+                    const data = JSON.parse(savedData);
+                    if (data.selectedTimezones && Array.isArray(data.selectedTimezones)) {
+                        selectedTimezones = data.selectedTimezones;
+                    }
+                    if (data.homeTimezone) {
+                        homeTimezone = data.homeTimezone;
+                        document.getElementById('homeTimezone').value = homeTimezone;
+                    }
+                    if (data.customDateTime) {
+                        customDateTime = new Date(data.customDateTime);
+                    }
+                    renderTimezoneCards();
+                } catch(e) {
+                    console.error('Error loading saved data:', e);
+                }
+            }
+        }
+        // --- End Local Storage functions ---
 
         init();
     </script>
