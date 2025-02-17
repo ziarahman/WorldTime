@@ -4,59 +4,90 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>World Time Comparison Tool</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
+    /* General Styles */
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      color: #fff;
+      text-align: center;
       margin: 0;
       padding: 0;
-      max-width: 600px;
-      margin: auto;
     }
 
-    header, footer {
-      padding: 20px;
-      text-align: center;
+    h1 {
+      font-size: 26px;
+      font-weight: 600;
+      margin-bottom: 10px;
     }
 
     main {
       padding: 20px;
     }
 
+    /* Slider Styling */
     #time-slider {
-      margin-bottom: 20px;
+      margin: 20px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 80%;
+      height: 10px;
+      border-radius: 5px;
+      background: #ffffff33;
+      outline: none;
+      transition: all 0.3s ease-in-out;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ffcc00;
+      cursor: pointer;
+      transition: all 0.3s ease-in-out;
+    }
+
+    /* Timezone Cards */
     #timezones {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 15px;
       justify-content: center;
     }
 
     .timezone-card {
       position: relative;
-      border: 1px solid #ccc;
-      border-radius: 8px;
+      width: 220px;
       padding: 15px;
-      width: 200px;
-      box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.1);
+      box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+      transition: all 0.3s ease-in-out;
       text-align: center;
-      transition: background-color 0.3s;
     }
 
     .timezone-card.day {
-      background-color: #ffffff;
+      background: rgba(255, 255, 255, 0.2);
+      color: #000;
     }
 
     .timezone-card.night {
-      background-color: #333333;
-      color: #ffffff;
+      background: rgba(0, 0, 0, 0.4);
+      color: #fff;
     }
 
     .timezone-card .close-btn {
       position: absolute;
-      top: 5px;
-      right: 10px;
+      top: 8px;
+      right: 12px;
       font-size: 18px;
       font-weight: bold;
       color: red;
@@ -67,27 +98,48 @@
       color: darkred;
     }
 
-    input[type="range"] {
-      width: 100%;
-    }
-
-    button, select {
-      margin: 10px 5px;
-      padding: 10px 15px;
+    .timezone-card span {
       font-size: 16px;
-      cursor: pointer;
+      font-weight: 600;
     }
 
+    /* Buttons & Select Styling */
+    select, button {
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      font-size: 14px;
+      cursor: pointer;
+      margin: 5px;
+    }
+
+    select {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+
+    button {
+      background: #ffcc00;
+      color: #333;
+      font-weight: 600;
+      transition: 0.3s ease-in-out;
+    }
+
+    button:hover {
+      background: #e6b800;
+    }
+
+    /* Responsive Design */
     @media (max-width: 768px) {
       .timezone-card {
-        width: 100%;
+        width: 90%;
       }
     }
   </style>
 </head>
 <body>
   <header>
-    <h1>World Time Comparison Tool</h1>
+    <h1>🌎 World Time Comparison Tool</h1>
   </header>
 
   <main>
@@ -119,7 +171,7 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      const timezones = new Set(); // Use a Set to track selected timezones
+      const timezones = new Set();
       const homeTimezoneSelect = document.getElementById("home-timezone");
       const addTimezoneSelect = document.getElementById("add-timezone");
       const addButton = document.getElementById("add-button");
@@ -130,12 +182,9 @@
       function populateTimezones() {
         const timezoneOptions = Intl.supportedValuesOf("timeZone");
         timezoneOptions.forEach((tz) => {
-          const option1 = document.createElement("option");
-          const option2 = document.createElement("option");
-          option1.value = option2.value = tz;
-          option1.textContent = option2.textContent = tz;
-          homeTimezoneSelect.appendChild(option1);
-          addTimezoneSelect.appendChild(option2);
+          const option = new Option(tz, tz);
+          homeTimezoneSelect.appendChild(option.cloneNode(true));
+          addTimezoneSelect.appendChild(option);
         });
         homeTimezoneSelect.value = Intl.DateTimeFormat().resolvedOptions().timeZone;
       }
@@ -164,14 +213,7 @@
         time.classList.add("timezone-time");
         time.textContent = calculateTime(timezone, slider.value);
 
-        const offset = document.createElement("div");
-        offset.textContent = getGMTOffset(timezone);
-
-        card.appendChild(closeButton);
-        card.appendChild(label);
-        card.appendChild(time);
-        card.appendChild(offset);
-
+        card.append(closeButton, label, time);
         updateCardBackground(card, timezone, slider.value);
 
         timezonesDiv.appendChild(card);
@@ -183,87 +225,27 @@
       }
 
       function updateTimes() {
-        const cards = document.querySelectorAll(".timezone-card");
-        cards.forEach((card) => {
+        sliderTime.textContent = formatSliderTime(slider.value);
+        document.querySelectorAll(".timezone-card").forEach(card => {
           const timezone = card.dataset.timezone;
-          const timeElem = card.querySelector(".timezone-time");
-          timeElem.textContent = calculateTime(timezone, slider.value);
+          card.querySelector(".timezone-time").textContent = calculateTime(timezone, slider.value);
           updateCardBackground(card, timezone, slider.value);
         });
-        sliderTime.textContent = formatSliderTime(slider.value);
-      }
-
-      function updateCardBackground(card, timezone, sliderValue) {
-        const isDaytime = isDayTime(timezone, sliderValue);
-        if (isDaytime) {
-          card.classList.add("day");
-          card.classList.remove("night");
-        } else {
-          card.classList.add("night");
-          card.classList.remove("day");
-        }
-      }
-
-      function isDayTime(timezone, sliderValue) {
-        const now = new Date();
-        now.setUTCMinutes(sliderValue * 30); // Convert slider value to minutes
-        const hour = new Intl.DateTimeFormat("en-US", {
-          timeZone: timezone,
-          hour: "numeric",
-        }).format(now);
-        return hour >= 6 && hour < 18; // Daytime between 6 AM and 6 PM
       }
 
       function calculateTime(timezone, sliderValue) {
         const now = new Date();
-        now.setUTCMinutes(sliderValue * 30); // Convert slider value to minutes
-        return new Intl.DateTimeFormat("en-US", {
-          timeZone: timezone,
-          hour: "numeric",
-          minute: "numeric",
-        }).format(now);
-      }
-
-      function getGMTOffset(timezone) {
-        const now = new Date();
-        const offsetMinutes = -now.getTimezoneOffset() + new Date().toLocaleString("en-US", { timeZone: timezone }).getTimezoneOffset();
-        const offsetHours = offsetMinutes / 60;
-        const sign = offsetHours >= 0 ? "+" : "-";
-        return `(GMT${sign}${Math.abs(offsetHours)})`;
+        now.setUTCMinutes(sliderValue * 30);
+        return new Intl.DateTimeFormat("en-US", { timeZone: timezone, hour: "numeric", minute: "numeric" }).format(now);
       }
 
       function formatSliderTime(value) {
-        const totalMinutes = value * 30;
-        const hours = Math.floor(totalMinutes / 60);
-        const minutes = totalMinutes % 60;
-        const period = hours >= 12 ? "PM" : "AM";
-        const formattedHours = hours % 12 || 12;
-        return `${formattedHours}:${minutes === 0 ? "00" : "30"} ${period}`;
+        return new Date(value * 1800000).toISOString().substr(11, 5);
       }
 
       populateTimezones();
       slider.addEventListener("input", updateTimes);
-
-      addButton.addEventListener("click", () => {
-        const selectedTimezone = addTimezoneSelect.value;
-        if (selectedTimezone) {
-          addTimezoneCard(selectedTimezone);
-        }
-      });
-
-      homeTimezoneSelect.addEventListener("change", () => {
-        const homeTimezone = homeTimezoneSelect.value;
-        const homeTimeElem = document.getElementById("home-time");
-        homeTimeElem.textContent = calculateTime(homeTimezone, slider.value);
-        const homeOffsetElem = document.getElementById("home-offset");
-        homeOffsetElem.textContent = getGMTOffset(homeTimezone);
-        document.getElementById("home-timezone-card").dataset.timezone = homeTimezone;
-        updateCardBackground(document.getElementById("home-timezone-card"), homeTimezone, slider.value);
-      });
-
-      const defaultTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      homeTimezoneSelect.value = defaultTimezone;
-      document.getElementById("home-timezone-card").dataset.timezone = defaultTimezone;
+      addButton.addEventListener("click", () => addTimezoneCard(addTimezoneSelect.value));
     });
   </script>
 </body>
