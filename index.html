@@ -32,9 +32,6 @@
             margin-bottom: 15px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             transition: background 0.5s ease;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
         }
 
         .timezone-list {
@@ -64,12 +61,12 @@
         }
 
         .day {
-            background-color: white;
-            color: black;
+            background: linear-gradient(135deg, #87CEEB, #E0F6FF);
+            color: #333;
         }
 
         .night {
-            background-color: black;
+            background: linear-gradient(135deg, #1a237e, #0d1b2a);
             color: white;
         }
 
@@ -83,6 +80,7 @@
             border-radius: 5px;
             border: 1px solid #ddd;
             font-size: 14px;
+            width: 100%;
         }
 
         button {
@@ -97,6 +95,7 @@
         }
 
         .set-btn {
+            margin-left: 10px;
             padding: 5px 10px;
             font-size: 12px;
             background-color: #007bff;
@@ -122,10 +121,9 @@
                 <input id="homeTimezone" list="timezoneOptions" placeholder="Search timezone..." 
                        onchange="setHomeTimezone(this.value)">
                 <datalist id="timezoneOptions"></datalist>
-                <div id="homeTimeContainer">
-                    <span id="homeTime"></span>
-                    <button class="set-btn" onclick="toggleDateTimePicker()">SET</button>
-                </div>
+                <div id="homeTime" class="timezone-info"></div>
+                <button class="set-btn" onclick="toggleDateTimePicker()">SET</button>
+                <input type="datetime-local" id="homeDateTimePicker" style="display:none;" onchange="setCustomTime()">
             </div>
             
             <div class="controls">
@@ -141,7 +139,6 @@
         let homeTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         let selectedTimezones = [];
         let customDateTime = null; 
-        let isDateTimePickerActive = false;
 
         function init() {
             timezones = Intl.supportedValuesOf('timeZone');
@@ -189,19 +186,8 @@
         }
 
         function toggleDateTimePicker() {
-            const container = document.getElementById('homeTimeContainer');
-            
-            if (!isDateTimePickerActive) {
-                const input = document.createElement('input');
-                input.type = 'datetime-local';
-                input.id = 'homeDateTimePicker';
-                input.value = customDateTime ? new Date(customDateTime).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16);
-                input.onchange = setCustomTime;
-
-                container.innerHTML = '';
-                container.appendChild(input);
-                isDateTimePickerActive = true;
-            }
+            const picker = document.getElementById('homeDateTimePicker');
+            picker.style.display = picker.style.display === 'none' ? 'block' : 'none';
         }
 
         function setCustomTime() {
@@ -235,23 +221,29 @@
             document.getElementById('homeTimezoneSection').className = 
                 `home-timezone ${homeHour >= 6 && homeHour < 18 ? 'day' : 'night'}`;
 
-            if (!isDateTimePickerActive) {
-                homeTimeElement.textContent = now.toLocaleString('en-US', { timeZone: homeTimezone });
-            }
+            homeTimeElement.textContent = now.toLocaleString('en-US', { timeZone: homeTimezone });
 
             // Update other timezones
             document.querySelectorAll('.timezone-card .time').forEach(el => {
                 const tz = el.dataset.tz;
-                const hour = now.toLocaleString('en-US', { timeZone: tz, hour: 'numeric', hour12: false });
                 el.textContent = now.toLocaleString('en-US', { timeZone: tz });
-
-                el.parentElement.className = `timezone-card ${hour >= 6 && hour < 18 ? 'day' : 'night'}`;
             });
         }
 
         function saveToLocalStorage() {
             localStorage.setItem('selectedTimezones', JSON.stringify(selectedTimezones));
             localStorage.setItem('homeTimezone', homeTimezone);
+        }
+
+        function loadSavedData() {
+            const savedTimezones = localStorage.getItem('selectedTimezones');
+            const savedHome = localStorage.getItem('homeTimezone');
+            
+            if (savedTimezones) selectedTimezones = JSON.parse(savedTimezones);
+            if (savedHome && timezones.includes(savedHome)) homeTimezone = savedHome;
+            
+            document.getElementById('homeTimezone').value = homeTimezone;
+            renderTimezoneCards();
         }
 
         init();
