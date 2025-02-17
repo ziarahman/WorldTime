@@ -123,8 +123,8 @@
                        onchange="setHomeTimezone(this.value)">
                 <datalist id="timezoneOptions"></datalist>
                 <div id="homeTimeContainer">
-                    <input type="datetime-local" id="homeDateTimePicker" onchange="setCustomTime()">
-                    <button class="set-btn" onclick="resetToCurrentTime()">Reset</button>
+                    <span id="homeTime"></span>
+                    <button class="set-btn" onclick="toggleDateTimePicker()">SET</button>
                 </div>
             </div>
             
@@ -140,7 +140,8 @@
         let timezones = [];
         let homeTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         let selectedTimezones = [];
-        let customDateTime = new Date(); 
+        let customDateTime = null; 
+        let isDateTimePickerActive = false;
 
         function init() {
             timezones = Intl.supportedValuesOf('timeZone');
@@ -187,10 +188,20 @@
             updateTimes();
         }
 
-        function resetToCurrentTime() {
-            customDateTime = new Date();
-            document.getElementById('homeDateTimePicker').value = customDateTime.toISOString().slice(0, 16);
-            updateTimes();
+        function toggleDateTimePicker() {
+            const container = document.getElementById('homeTimeContainer');
+            
+            if (!isDateTimePickerActive) {
+                const input = document.createElement('input');
+                input.type = 'datetime-local';
+                input.id = 'homeDateTimePicker';
+                input.value = customDateTime ? new Date(customDateTime).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16);
+                input.onchange = setCustomTime;
+
+                container.innerHTML = '';
+                container.appendChild(input);
+                isDateTimePickerActive = true;
+            }
         }
 
         function setCustomTime() {
@@ -215,13 +226,18 @@
         }
 
         function updateTimes() {
-            const now = new Date(customDateTime);
+            const now = customDateTime ? new Date(customDateTime) : new Date();
             
             // Update home time
+            const homeTimeElement = document.getElementById('homeTime');
             const homeHour = now.toLocaleString('en-US', { timeZone: homeTimezone, hour: 'numeric', hour12: false });
 
             document.getElementById('homeTimezoneSection').className = 
                 `home-timezone ${homeHour >= 6 && homeHour < 18 ? 'day' : 'night'}`;
+
+            if (!isDateTimePickerActive) {
+                homeTimeElement.textContent = now.toLocaleString('en-US', { timeZone: homeTimezone });
+            }
 
             // Update other timezones
             document.querySelectorAll('.timezone-card .time').forEach(el => {
