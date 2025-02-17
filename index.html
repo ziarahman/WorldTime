@@ -194,8 +194,7 @@
             picker.style.display = picker.style.display === 'none' ? 'block' : 'none';
 
             let now = new Date();
-            let homeTime = now.toLocaleString('sv-SE', { timeZone: homeTimezone }).replace(" ", "T");
-            picker.value = homeTime;
+            picker.value = new Date(now.toLocaleString('sv-SE', { timeZone: homeTimezone })).toISOString().slice(0,16);
         }
 
         function setCustomTime() {
@@ -206,39 +205,23 @@
         function updateTimes() {
             const now = customDateTime ? new Date(customDateTime) : new Date();
 
-            // Update home timezone display and background color
-            const homeHour = now.toLocaleString('en-US', { timeZone: homeTimezone, hour: 'numeric', hour12: false });
-            document.getElementById('homeTimezoneSection').className =
-                `home-timezone ${homeHour >= 6 && homeHour < 18 ? 'day' : 'night'}`;
-            document.getElementById('homeTime').textContent = now.toLocaleString('en-US', { timeZone: homeTimezone });
+            document.getElementById('homeTime').textContent = new Intl.DateTimeFormat('en-US', { 
+                timeZone: homeTimezone, 
+                dateStyle: 'full', 
+                timeStyle: 'long' 
+            }).format(now);
 
             document.querySelectorAll('.timezone-card .time').forEach(el => {
                 const tz = el.dataset.tz;
-                const tzTime = new Date(now.toLocaleString('en-US', { timeZone: tz }));
-                const tzHour = tzTime.getHours();
-                el.textContent = tzTime.toLocaleString('en-US', { timeZone: tz });
+                el.textContent = new Intl.DateTimeFormat('en-US', { 
+                    timeZone: tz, 
+                    dateStyle: 'full', 
+                    timeStyle: 'long' 
+                }).format(now);
 
                 const card = el.closest('.timezone-card');
-                card.className = `timezone-card ${tzHour >= 6 && tzHour < 18 ? 'day' : 'night'}`;
+                card.className = `timezone-card ${now.getHours() >= 6 && now.getHours() < 18 ? 'day' : 'night'}`;
             });
-        }
-
-        function renderTimezoneCards() {
-            const container = document.getElementById('timezoneList');
-            container.innerHTML = '';
-
-            selectedTimezones.forEach(tz => {
-                const card = document.createElement('div');
-                card.className = 'timezone-card';
-                card.innerHTML = `
-                    <button class="remove-btn" onclick="removeTimezone('${tz}')">&times;</button>
-                    <h3>${tz.split('/').pop().replace(/_/g, ' ')}</h3>
-                    <div class="time timezone-info" data-tz="${tz}"></div>
-                `;
-                container.appendChild(card);
-            });
-
-            updateTimes();
         }
 
         init();
