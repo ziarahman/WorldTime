@@ -25,31 +25,15 @@
       padding: 20px;
     }
 
-    #time-slider {
-      margin: 20px 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    input[type="range"] {
-      -webkit-appearance: none;
-      width: 80%;
-      height: 10px;
+    #datetime-picker {
+      background: #fff;
+      color: #333;
+      padding: 10px;
       border-radius: 5px;
-      background: #ffffff33;
-      outline: none;
-      transition: all 0.3s ease-in-out;
-    }
-
-    input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background: #ffcc00;
+      border: none;
+      font-size: 14px;
+      margin: 10px;
       cursor: pointer;
-      transition: all 0.3s ease-in-out;
     }
 
     #timezones {
@@ -61,7 +45,7 @@
 
     .timezone-card {
       position: relative;
-      width: 220px;
+      width: 230px;
       padding: 15px;
       border-radius: 12px;
       backdrop-filter: blur(10px);
@@ -72,12 +56,12 @@
     }
 
     .timezone-card.day {
-      background: rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.9);
       color: #000;
     }
 
     .timezone-card.night {
-      background: rgba(0, 0, 0, 0.4);
+      background: rgba(0, 0, 0, 0.7);
       color: #fff;
     }
 
@@ -133,10 +117,9 @@
   </header>
 
   <main>
-    <div id="time-slider">
-      <label for="slider">Adjust Time (in GMT):</label>
-      <input type="range" id="slider" min="0" max="47" value="24">
-      <span id="slider-time">12:00 PM</span>
+    <div>
+      <label for="datetime-picker">Select Date & Time:</label>
+      <input type="datetime-local" id="datetime-picker">
     </div>
 
     <div>
@@ -147,7 +130,7 @@
     <div id="timezones">
       <div class="timezone-card day" id="home-timezone-card">
         <span>Home Timezone</span>
-        <div id="home-time">12:00 PM</div>
+        <div id="home-time">Loading...</div>
       </div>
     </div>
 
@@ -165,8 +148,7 @@
       const addTimezoneSelect = document.getElementById("add-timezone");
       const addButton = document.getElementById("add-button");
       const timezonesDiv = document.getElementById("timezones");
-      const slider = document.getElementById("slider");
-      const sliderTime = document.getElementById("slider-time");
+      const dateTimePicker = document.getElementById("datetime-picker");
 
       function populateTimezones() {
         const timezoneOptions = Intl.supportedValuesOf("timeZone");
@@ -175,7 +157,9 @@
           homeTimezoneSelect.appendChild(option.cloneNode(true));
           addTimezoneSelect.appendChild(option);
         });
+
         homeTimezoneSelect.value = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        dateTimePicker.value = new Date().toISOString().slice(0, 16);
       }
 
       function addTimezoneCard(timezone) {
@@ -200,9 +184,9 @@
 
         const time = document.createElement("div");
         time.classList.add("timezone-time");
-        time.textContent = calculateTime(timezone, slider.value);
-
         card.append(closeButton, label, time);
+
+        updateTime(card);
         timezonesDiv.appendChild(card);
       }
 
@@ -211,29 +195,40 @@
         card.remove();
       }
 
-      function updateTimes() {
-        sliderTime.textContent = formatSliderTime(slider.value);
-        document.querySelectorAll(".timezone-card").forEach(card => {
-          const timezone = card.dataset.timezone;
-          card.querySelector(".timezone-time").textContent = calculateTime(timezone, slider.value);
-        });
+      function updateTime(card) {
+        const timezone = card.dataset.timezone;
+        const date = new Date(dateTimePicker.value);
+        const formatter = new Intl.DateTimeFormat("en-US", { timeZone: timezone, weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+        card.querySelector(".timezone-time").textContent = formatter.format(date);
+        updateCardBackground(card, timezone);
       }
 
-      function calculateTime(timezone, sliderValue) {
-        const now = new Date();
-        now.setUTCHours(0, sliderValue * 30);
-        return new Intl.DateTimeFormat("en-US", { timeZone: timezone, hour: "2-digit", minute: "2-digit" }).format(now);
+      function updateCardBackground(card, timezone) {
+        const date = new Date(dateTimePicker.value);
+        const hour = new Intl.DateTimeFormat("en-US", { timeZone: timezone, hour: "numeric", hour12: false }).format(date);
+        if (hour >= 6 && hour < 18) {
+          card.classList.add("day");
+          card.classList.remove("night");
+        } else {
+          card.classList.add("night");
+          card.classList.remove("day");
+        }
       }
 
-      function formatSliderTime(value) {
-        const hours = Math.floor(value / 2);
-        const minutes = (value % 2) * 30;
-        return `${hours}:${minutes === 0 ? "00" : "30"}`;
+      function updateAllTimes() {
+        document.querySelectorAll(".timezone-card").forEach(updateTime);
       }
+
+      dateTimePicker.addEventListener("change", updateAllTimes);
+      homeTimezoneSelect.addEventListener("change", () => {
+        document.getElementById("home-timezone-card").dataset.timezone = homeTimezoneSelect.value;
+        updateAllTimes();
+      });
+
+      addButton.addEventListener("click", () => addTimezoneCard(addTimezoneSelect.value));
 
       populateTimezones();
-      slider.addEventListener("input", updateTimes);
-      addButton.addEventListener("click", () => addTimezoneCard(addTimezoneSelect.value));
+      updateAllTimes();
     });
   </script>
 </body>
