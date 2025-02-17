@@ -110,6 +110,10 @@
             color: inherit;
             opacity: 0.8;
         }
+
+        .time {
+            transition: opacity 0.5s ease-in-out;
+        }
     </style>
 </head>
 <body>
@@ -138,7 +142,7 @@
         let timezones = [];
         let homeTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         let selectedTimezones = [];
-        let customDateTime = null; 
+        let customDateTime = null;
 
         function init() {
             timezones = Intl.supportedValuesOf('timeZone');
@@ -187,18 +191,41 @@
 
         function toggleDateTimePicker() {
             const picker = document.getElementById('homeDateTimePicker');
-            picker.style.display = picker.style.display === 'none' ? 'block' : 'none';
+            const homeTimeElement = document.getElementById('homeTime');
+            
+            if (picker.style.display === 'none') {
+                picker.style.display = 'block';
+                picker.value = new Date().toISOString().slice(0, 16);
+                homeTimeElement.style.display = 'none';
+            } else {
+                picker.style.display = 'none';
+                homeTimeElement.style.display = 'block';
+            }
         }
 
         function setCustomTime() {
             customDateTime = new Date(document.getElementById('homeDateTimePicker').value);
+            
+            document.getElementById('homeDateTimePicker').style.display = 'none';
+            document.getElementById('homeTime').style.display = 'block';
+
+            triggerAnimation();
             updateTimes();
+        }
+
+        function triggerAnimation() {
+            document.querySelectorAll('.timezone-card .time').forEach(el => {
+                el.style.opacity = 0;
+                setTimeout(() => {
+                    el.style.opacity = 1;
+                }, 500);
+            });
         }
 
         function renderTimezoneCards() {
             const container = document.getElementById('timezoneList');
             container.innerHTML = '';
-            
+
             selectedTimezones.forEach(tz => {
                 const card = document.createElement('div');
                 card.className = 'timezone-card';
@@ -209,21 +236,21 @@
                 `;
                 container.appendChild(card);
             });
+
+            updateTimes();
         }
 
         function updateTimes() {
             const now = customDateTime ? new Date(customDateTime) : new Date();
-            
-            // Update home time
+
             const homeTimeElement = document.getElementById('homeTime');
             const homeHour = now.toLocaleString('en-US', { timeZone: homeTimezone, hour: 'numeric', hour12: false });
 
-            document.getElementById('homeTimezoneSection').className = 
+            document.getElementById('homeTimezoneSection').className =
                 `home-timezone ${homeHour >= 6 && homeHour < 18 ? 'day' : 'night'}`;
 
             homeTimeElement.textContent = now.toLocaleString('en-US', { timeZone: homeTimezone });
 
-            // Update other timezones
             document.querySelectorAll('.timezone-card .time').forEach(el => {
                 const tz = el.dataset.tz;
                 el.textContent = now.toLocaleString('en-US', { timeZone: tz });
@@ -238,10 +265,10 @@
         function loadSavedData() {
             const savedTimezones = localStorage.getItem('selectedTimezones');
             const savedHome = localStorage.getItem('homeTimezone');
-            
+
             if (savedTimezones) selectedTimezones = JSON.parse(savedTimezones);
             if (savedHome && timezones.includes(savedHome)) homeTimezone = savedHome;
-            
+
             document.getElementById('homeTimezone').value = homeTimezone;
             renderTimezoneCards();
         }
