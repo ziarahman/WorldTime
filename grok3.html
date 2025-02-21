@@ -42,7 +42,7 @@
       position: relative;
       width: 100%;
       border-radius: 10px;
-      padding: 15px;
+      padding: 15px 15px 15px 15px;
       margin-bottom: 10px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
       transition: background 0.5s ease;
@@ -50,15 +50,17 @@
 
     .remove-btn {
       position: absolute;
-      top: 5px;
-      right: 5px;
+      padding: 0px;
+      top: 35%;
+      left: 47%;
+      margin: 2px;
       background: none;
       border: none;
       font-size: 20px;
       cursor: pointer;
       color: red;
       font-weight: bold;
-      z-index: 100;
+      z-index: 10;
     }
 
     .day {
@@ -116,8 +118,8 @@
     <div class="header">
       <h1>World Time Comparison</h1>
       <div class="home-timezone" id="homeTimezoneSection">
-        <strong>Home Timezone:</strong>
-        <input id="homeTimezone" list="timezoneOptions" placeholder="Search timezone..." onchange="setHomeTimezone(this.value)">
+        <strong>Home City:</strong>
+        <input id="homeTimezone" list="timezoneOptions" placeholder="Search city..." onchange="setHomeTimezone(this.value)">
         <datalist id="timezoneOptions"></datalist>
         <div id="homeTime" class="timezone-info"></div>
         <button class="set-btn" onclick="toggleDateTimePicker()">SET DATE & TIME</button>
@@ -125,8 +127,8 @@
       </div>
       
       <div class="controls">
-        <input id="timezoneInput" list="timezoneOptions" placeholder="Search timezone to compare...">
-        <button onclick="addTimezone()">Add Timezone to Compare</button>
+        <input id="timezoneInput" list="timezoneOptions" placeholder="Search city to compare...">
+        <button onclick="addTimezone()">Add City to Compare</button>
       </div>
     </div>
     <div class="timezone-list" id="timezoneList"></div>
@@ -137,9 +139,16 @@
     let homeTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     let selectedTimezones = [];
     let customDateTime = null;
+    const cityToTimezone = {};
+    const timezoneToCity = {};
 
     function init() {
       timezones = Intl.supportedValuesOf('timeZone');
+      timezones.forEach(tz => {
+        const city = tz.split('/').pop().replace(/_/g, ' ');
+        cityToTimezone[city] = tz;
+        timezoneToCity[tz] = city;
+      });
       populateTimezoneOptions();
       detectUserTimezone();
       loadSavedData();
@@ -148,27 +157,33 @@
     }
 
     function detectUserTimezone() {
-      document.getElementById('homeTimezone').value = homeTimezone;
+      const city = timezoneToCity[homeTimezone] || 'Unknown';
+      document.getElementById('homeTimezone').value = city;
       updateTimes();
     }
 
     function populateTimezoneOptions() {
       const datalist = document.getElementById('timezoneOptions');
-      timezones.forEach(tz => {
+      Object.keys(cityToTimezone).forEach(city => {
         const option = document.createElement('option');
-        option.value = tz;
+        option.value = city;
         datalist.appendChild(option);
       });
     }
 
     function addTimezone() {
       const input = document.getElementById('timezoneInput');
-      const tz = input.value;
-      if (timezones.includes(tz) && !selectedTimezones.includes(tz)) {
-        selectedTimezones.push(tz);
-        input.value = '';
-        renderTimezoneCards();
-        saveToLocalStorage();
+      const city = input.value;
+      if (cityToTimezone[city]) {
+        const tz = cityToTimezone[city];
+        if (!selectedTimezones.includes(tz)) {
+          selectedTimezones.push(tz);
+          input.value = '';
+          renderTimezoneCards();
+          saveToLocalStorage();
+        }
+      } else {
+        alert('Invalid city. Please select from the list.');
       }
     }
 
@@ -178,16 +193,15 @@
       saveToLocalStorage();
     }
 
-    function setHomeTimezone(tz) {
-      if (!timezones.includes(tz)) {
-        alert('Invalid timezone. Please select from the list.');
+    function setHomeTimezone(city) {
+      if (!cityToTimezone[city]) {
+        alert('Invalid city. Please select from the list.');
         return;
       }
-      homeTimezone = tz;
-      document.getElementById('homeTimezone').value = homeTimezone;
+      homeTimezone = cityToTimezone[city];
       customDateTime = new Date();
       updateTimes();
-      renderTimezoneCards(); // Ensure updates apply correctly
+      renderTimezoneCards();
       saveToLocalStorage();
     }
 
@@ -204,12 +218,9 @@
       saveToLocalStorage();
     }
 
-    // --- New Helper Function to calculate GMT offset ---
     function getTimezoneOffsetString(tz, date = new Date()) {
-      // Get the current time in UTC and in the target timezone.
       const utcDate = new Date(date.toLocaleString("en-US", { timeZone: "UTC" }));
       const tzDate = new Date(date.toLocaleString("en-US", { timeZone: tz }));
-      // Calculate difference in minutes.
       const diffMinutes = Math.round((tzDate - utcDate) / 60000);
       const sign = diffMinutes >= 0 ? "+" : "-";
       const absMinutes = Math.abs(diffMinutes);
@@ -217,20 +228,15 @@
       const minutes = absMinutes % 60;
       return `GMT${sign}${hours}${minutes > 0 ? ":" + (minutes < 10 ? "0" : "") + minutes : ""}`;
     }
-    // --- End Helper Function ---
 
     function updateTimes() {
       const now = customDateTime ? new Date(customDateTime) : new Date();
-
-      // Update Home Time using homeTimezone
       const homeNow = new Date(now.toLocaleString('en-US', { timeZone: homeTimezone }));
       document.getElementById('homeTime').textContent = new Intl.DateTimeFormat('en-US', {
         timeZone: homeTimezone,
         dateStyle: 'full',
         timeStyle: 'long'
       }).format(now);
-
-      // --- Update Home Timezone card background according to time ---
       const homeCard = document.getElementById('homeTimezoneSection');
       if (homeNow.getHours() >= 6 && homeNow.getHours() < 18) {
         homeCard.style.backgroundColor = "white";
@@ -239,23 +245,17 @@
         homeCard.style.backgroundColor = "black";
         homeCard.style.color = "white";
       }
-
-      // Update each comparison timezone card
       document.querySelectorAll('.timezone-card .time').forEach(el => {
         const tz = el.dataset.tz;
-        // Get the local time in that timezone
         const localNow = new Date(now.toLocaleString('en-US', { timeZone: tz }));
         el.textContent = new Intl.DateTimeFormat('en-US', {
           timeZone: tz,
           dateStyle: 'full',
           timeStyle: 'long'
         }).format(now);
-
         const card = el.closest('.timezone-card');
         card.className = `timezone-card ${localNow.getHours() >= 6 && localNow.getHours() < 18 ? 'day' : 'night'}`;
       });
-
-      // Update the GMT offset in each timezone card header
       document.querySelectorAll('.gmt-offset').forEach(span => {
         const tz = span.dataset.tz;
         span.textContent = getTimezoneOffsetString(tz, customDateTime ? new Date(customDateTime) : new Date());
@@ -265,23 +265,19 @@
     function renderTimezoneCards() {
       const container = document.getElementById('timezoneList');
       container.innerHTML = '';
-
       selectedTimezones.forEach(tz => {
         const card = document.createElement('div');
         card.className = 'timezone-card';
-        // The header now includes a span (with class "gmt-offset") that will be updated with the GMT offset.
         card.innerHTML = `
           <button class="remove-btn" onclick="removeTimezone('${tz}')">×</button>
-          <h3>${tz.split('/').pop().replace(/_/g, ' ')} <span class="gmt-offset" data-tz="${tz}"></span></h3>
+          <h3>${timezoneToCity[tz]} <span class="gmt-offset" data-tz="${tz}"></span></h3>
           <div class="time timezone-info" data-tz="${tz}"></div>
         `;
         container.appendChild(card);
       });
-
       updateTimes();
     }
 
-    // --- Local Storage Functions ---
     function saveToLocalStorage() {
       const data = {
         selectedTimezones,
@@ -301,7 +297,6 @@
           }
           if (data.homeTimezone) {
             homeTimezone = data.homeTimezone;
-            document.getElementById('homeTimezone').value = homeTimezone;
           }
           if (data.customDateTime) {
             customDateTime = new Date(data.customDateTime);
@@ -312,9 +307,9 @@
         }
       }
     }
-    // --- End Local Storage Functions ---
 
     init();
   </script>
 </body>
 </html>
+​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​
