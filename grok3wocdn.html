@@ -28,126 +28,130 @@
     <div class="header">
       <h1>World Time Comparison</h1>
       <div class="home-timezone" id="homeTimezoneSection">
-        <strong>Home City:</strong>
-        <input id="homeCity" list="cityOptions" placeholder="Search city (e.g., Austin)..." oninput="this.value = this.value.trim()">
-        <datalist id="cityOptions"></datalist>
+        <strong>Home Timezone:</strong>
+        <input id="homeTimezone" list="timezoneOptions" placeholder="Search city or timezone..." oninput="this.value = this.value.trim()">
+        <datalist id="timezoneOptions"></datalist>
         <div id="homeTime" class="timezone-info"></div>
         <button class="set-btn" onclick="toggleDateTimePicker()">SET DATE & TIME</button>
         <input type="datetime-local" id="homeDateTimePicker" style="display:none;" onchange="setCustomTime()">
       </div>
       <div class="controls">
-        <input id="compareCity" list="cityOptions" placeholder="Search city to compare..." oninput="this.value = this.value.trim()">
-        <button onclick="addCity()">Add City to Compare</button>
+        <input id="timezoneInput" list="timezoneOptions" placeholder="Search city or timezone to compare..." oninput="this.value = this.value.trim()">
+        <button onclick="addTimezone()">Add Timezone to Compare</button>
       </div>
     </div>
     <div class="timezone-list" id="timezoneList"></div>
   </div>
 
   <script>
-    let cityToTimezoneMap = {};
+    let timezones = [];
     let homeTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    let selectedCities = [];
+    let selectedTimezones = [];
     let customDateTime = null;
 
-    // Replace 'YOUR_GEONAMES_USERNAME' with your actual GeoNames username
-    const geonamesUsername = 'YOUR_GEONAMES_USERNAME';
+    // Subset of GeoNames "cities15000" data embedded for offline use
+    const cityTimezoneData = [
+      { city: "Austin", country: "United States", timezone: "America/Chicago" },
+      { city: "San Francisco", country: "United States", timezone: "America/Los_Angeles" },
+      { city: "New Delhi", country: "India", timezone: "Asia/Kolkata" },
+      { city: "New York", country: "United States", timezone: "America/New_York" },
+      { city: "London", country: "United Kingdom", timezone: "Europe/London" },
+      { city: "Tokyo", country: "Japan", timezone: "Asia/Tokyo" },
+      { city: "Sydney", country: "Australia", timezone: "Australia/Sydney" },
+      { city: "Paris", country: "France", timezone: "Europe/Paris" },
+      { city: "Beijing", country: "China", timezone: "Asia/Shanghai" },
+      { city: "Moscow", country: "Russia", timezone: "Europe/Moscow" }
+    ];
 
-    /** Fetch city data from GeoNames API */
-    async function fetchCities(query) {
-      const url = `http://api.geonames.org/searchJSON?username=${geonamesUsername}&q=${query}&maxRows=10&featureClass=P`;
-      try {
-        const response = await fetch(url);
-        const data = await response.json();
-        return data.geonames.map(city => ({
-          name: city.name,
-          timezone: city.timezone.timeZoneId
-        }));
-      } catch (error) {
-        console.error('Error fetching cities:', error);
-        return [];
-      }
-    }
+    const timezoneToCity = {};
+    cityTimezoneData.forEach(item => {
+      timezoneToCity[item.timezone] = { city: item.city, country: item.country };
+    });
 
-    /** Populate the datalist with city options */
-    function populateCityOptions(cities) {
-      const datalist = document.getElementById('cityOptions');
-      datalist.innerHTML = '';
-      cities.forEach(city => {
-        const option = document.createElement('option');
-        option.value = city.name;
-        option.setAttribute('data-timezone', city.timezone);
-        option.textContent = `${city.name} (${city.timezone})`;
-        datalist.appendChild(option);
-      });
-    }
-
-    /** Search cities as the user types */
-    async function searchCities(query) {
-      if (query.length < 3) return; // Wait for at least 3 characters to reduce API calls
-      const cities = await fetchCities(query);
-      cityToTimezoneMap = cities.reduce((map, city) => {
-        map[city.name] = city.timezone;
-        return map;
-      }, {});
-      populateCityOptions(cities);
-    }
-
-    /** Initialize the app */
     function init() {
-      document.getElementById('homeCity').addEventListener('input', (e) => searchCities(e.target.value));
-      document.getElementById('compareCity').addEventListener('input', (e) => searchCities(e.target.value));
+      timezones = Intl.supportedValuesOf('timeZone');
+      console.log('Timezones loaded:', timezones.length);
+      populateTimezoneOptions();
       detectUserTimezone();
       loadSavedData();
       setInterval(updateTimes, 1000);
       updateTimes();
     }
 
-    /** Detect user's timezone as a fallback */
     function detectUserTimezone() {
-      homeTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      document.getElementById('homeCity').value = ''; // Prompt user to select a city
+      document.getElementById('homeTimezone').value = homeTimezone;
       updateTimes();
     }
 
-    /** Add a city to the comparison list */
-    function addCity() {
-      const input = document.getElementById('compareCity');
-      const city = input.value.trim();
-      const tz = cityToTimezoneMap[city];
-      if (tz && !selectedCities.includes(city)) {
-        selectedCities.push(city);
+    function populateTimezoneOptions() {
+      const datalist = document.getElementById('timezoneOptions');
+      datalist.innerHTML = '';
+
+      // Add city options from GeoNames subset
+      cityTimezoneData.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item.timezone;
+        option.textContent = `${item.city}, ${item.country} (${item.timezone})`;
+        datalist.appendChild(option);
+      });
+
+      // Add remaining IANA timezones (optional, remove if only cities are needed)
+      timezones.forEach(tz => {
+        if (!cityTimezoneData.some(item => item.timezone === tz)) {
+          const option = document.createElement('option');
+          option.value = tz;
+          option.textContent = tz;
+          datalist.appendChild(option);
+        }
+      });
+
+      console.log('Datalist populated with', datalist.children.length, 'options');
+    }
+
+    function resolveTimezone(input) {
+      const trimmedInput = input.trim().toLowerCase();
+      if (timezones.includes(input)) return input;
+      const cityMatch = cityTimezoneData.find(item => item.city.toLowerCase() === trimmedInput);
+      return cityMatch ? cityMatch.timezone : null;
+    }
+
+    function addTimezone() {
+      const input = document.getElementById('timezoneInput');
+      const userInput = input.value.trim();
+      const tz = resolveTimezone(userInput);
+      if (tz && !selectedTimezones.includes(tz)) {
+        selectedTimezones.push(tz);
         input.value = '';
         renderTimezoneCards();
         saveToLocalStorage();
       } else {
-        alert('Please select a valid city from the list.');
+        console.log('Invalid or duplicate timezone:', userInput);
       }
     }
 
-    /** Remove a city from the comparison list */
-    function removeCity(city) {
-      selectedCities = selectedCities.filter(c => c !== city);
+    function removeTimezone(tz) {
+      selectedTimezones = selectedTimezones.filter(item => item !== tz);
       renderTimezoneCards();
       saveToLocalStorage();
     }
 
-    /** Set the home city and timezone */
-    function setHomeCity() {
-      const input = document.getElementById('homeCity');
-      const city = input.value.trim();
-      const tz = cityToTimezoneMap[city];
-      if (tz) {
-        homeTimezone = tz;
-        customDateTime = new Date();
-        updateTimes();
-        renderTimezoneCards();
-        saveToLocalStorage();
-      } else {
-        alert('Invalid city. Please select from the list.');
+    function setHomeTimezone() {
+      const input = document.getElementById('homeTimezone');
+      const userInput = input.value.trim();
+      const tz = resolveTimezone(userInput);
+      if (!tz) {
+        alert('Invalid city or timezone. Please select from the list.');
+        input.value = homeTimezone;
+        return;
       }
+      homeTimezone = tz;
+      customDateTime = new Date();
+      updateTimes();
+      renderTimezoneCards();
+      saveToLocalStorage();
+      console.log('Home timezone set to:', homeTimezone);
     }
 
-    /** Toggle the date-time picker visibility */
     function toggleDateTimePicker() {
       const picker = document.getElementById('homeDateTimePicker');
       picker.style.display = picker.style.display === 'none' ? 'block' : 'none';
@@ -155,14 +159,12 @@
       picker.value = new Date(now.toLocaleString('sv-SE', { timeZone: homeTimezone })).toISOString().slice(0, 16);
     }
 
-    /** Set a custom date and time */
     function setCustomTime() {
       customDateTime = new Date(document.getElementById('homeDateTimePicker').value);
       updateTimes();
       saveToLocalStorage();
     }
 
-    /** Calculate GMT offset for display */
     function getTimezoneOffsetString(tz, date = new Date()) {
       const utcDate = new Date(date.toLocaleString("en-US", { timeZone: "UTC" }));
       const tzDate = new Date(date.toLocaleString("en-US", { timeZone: tz }));
@@ -174,7 +176,6 @@
       return `GMT${sign}${hours}${minutes > 0 ? ":" + (minutes < 10 ? "0" : "") + minutes : ""}`;
     }
 
-    /** Update all displayed times */
     function updateTimes() {
       const now = customDateTime ? new Date(customDateTime) : new Date();
       const homeNow = new Date(now.toLocaleString('en-US', { timeZone: homeTimezone }));
@@ -188,8 +189,7 @@
       homeCard.className = `home-timezone ${homeNow.getHours() >= 6 && homeNow.getHours() < 18 ? 'day' : 'night'}`;
 
       document.querySelectorAll('.timezone-card .time').forEach(el => {
-        const city = el.dataset.city;
-        const tz = cityToTimezoneMap[city];
+        const tz = el.dataset.tz;
         const localNow = new Date(now.toLocaleString('en-US', { timeZone: tz }));
         el.textContent = new Intl.DateTimeFormat('en-US', {
           timeZone: tz,
@@ -207,45 +207,49 @@
       });
     }
 
-    /** Render timezone comparison cards */
     function renderTimezoneCards() {
       const container = document.getElementById('timezoneList');
       container.innerHTML = '';
-      selectedCities.forEach(city => {
-        const tz = cityToTimezoneMap[city];
+
+      selectedTimezones.forEach(tz => {
         const card = document.createElement('div');
         card.className = 'timezone-card';
+        let displayText = tz.split('/').pop().replace(/_/g, ' ');
+        if (timezoneToCity[tz]) {
+          const { city, country } = timezoneToCity[tz];
+          displayText = `${city}, ${country}`;
+        }
         card.innerHTML = `
-          <button class="remove-btn" onclick="removeCity('${city}')">×</button>
-          <h3>${city} (${tz}) <span class="gmt-offset" data-tz="${tz}"></span></h3>
-          <div class="time timezone-info" data-city="${city}" data-tz="${tz}"></div>
+          <button class="remove-btn" onclick="removeTimezone('${tz}')">×</button>
+          <h3>${displayText} <span class="gmt-offset" data-tz="${tz}"></span></h3>
+          <div class="time timezone-info" data-tz="${tz}"></div>
         `;
         container.appendChild(card);
       });
+
       updateTimes();
     }
 
-    /** Save data to local storage */
     function saveToLocalStorage() {
       const data = {
-        selectedCities,
+        selectedTimezones,
         homeTimezone,
         customDateTime: customDateTime ? customDateTime.toISOString() : null
       };
       localStorage.setItem('worldTimeData', JSON.stringify(data));
     }
 
-    /** Load saved data from local storage */
     function loadSavedData() {
       const savedData = localStorage.getItem('worldTimeData');
       if (savedData) {
         try {
           const data = JSON.parse(savedData);
-          if (data.selectedCities && Array.isArray(data.selectedCities)) {
-            selectedCities = data.selectedCities;
+          if (data.selectedTimezones && Array.isArray(data.selectedTimezones)) {
+            selectedTimezones = data.selectedTimezones;
           }
           if (data.homeTimezone) {
             homeTimezone = data.homeTimezone;
+            document.getElementById('homeTimezone').value = homeTimezone;
           }
           if (data.customDateTime) {
             customDateTime = new Date(data.customDateTime);
@@ -257,10 +261,8 @@
       }
     }
 
-    /** Event listener for setting home city */
-    document.getElementById('homeCity').addEventListener('change', setHomeCity);
+    document.getElementById('homeTimezone').addEventListener('change', setHomeTimezone);
 
-    /** Start the app */
     init();
   </script>
 </body>
