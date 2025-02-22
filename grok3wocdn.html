@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>World Time Comparison</title>
   <style>
-    /* Your existing styles remain unchanged */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: Arial, sans-serif; padding: 10px; background-color: #f0f0f0; }
     .container { max-width: 600px; margin: 0 auto; }
@@ -30,14 +29,14 @@
       <h1>World Time Comparison</h1>
       <div class="home-timezone" id="homeTimezoneSection">
         <strong>Home Timezone:</strong>
-        <input id="homeTimezone" list="timezoneOptions" placeholder="Search timezone..." onchange="setHomeTimezone(this.value)">
+        <input id="homeTimezone" list="timezoneOptions" placeholder="Search timezone..." oninput="this.value = this.value.trim()">
         <datalist id="timezoneOptions"></datalist>
         <div id="homeTime" class="timezone-info"></div>
         <button class="set-btn" onclick="toggleDateTimePicker()">SET DATE & TIME</button>
         <input type="datetime-local" id="homeDateTimePicker" style="display:none;" onchange="setCustomTime()">
       </div>
       <div class="controls">
-        <input id="timezoneInput" list="timezoneOptions" placeholder="Search timezone to compare...">
+        <input id="timezoneInput" list="timezoneOptions" placeholder="Search timezone to compare..." oninput="this.value = this.value.trim()">
         <button onclick="addTimezone()">Add Timezone to Compare</button>
       </div>
     </div>
@@ -52,6 +51,7 @@
 
     function init() {
       timezones = Intl.supportedValuesOf('timeZone');
+      console.log('Timezones loaded:', timezones.length); // Debug
       populateTimezoneOptions();
       detectUserTimezone();
       loadSavedData();
@@ -66,21 +66,26 @@
 
     function populateTimezoneOptions() {
       const datalist = document.getElementById('timezoneOptions');
+      datalist.innerHTML = '';
       timezones.forEach(tz => {
         const option = document.createElement('option');
         option.value = tz;
+        option.textContent = tz; // No country info without dependencies
         datalist.appendChild(option);
       });
+      console.log('Datalist populated with', datalist.children.length, 'options'); // Debug
     }
 
     function addTimezone() {
       const input = document.getElementById('timezoneInput');
-      const tz = input.value;
+      const tz = input.value.trim();
       if (timezones.includes(tz) && !selectedTimezones.includes(tz)) {
         selectedTimezones.push(tz);
         input.value = '';
         renderTimezoneCards();
         saveToLocalStorage();
+      } else {
+        console.log('Invalid or duplicate timezone:', tz); // Debug
       }
     }
 
@@ -90,17 +95,20 @@
       saveToLocalStorage();
     }
 
-    function setHomeTimezone(tz) {
+    function setHomeTimezone() {
+      const input = document.getElementById('homeTimezone');
+      const tz = input.value.trim();
       if (!timezones.includes(tz)) {
         alert('Invalid timezone. Please select from the list.');
+        input.value = homeTimezone;
         return;
       }
       homeTimezone = tz;
-      document.getElementById('homeTimezone').value = homeTimezone;
       customDateTime = new Date();
       updateTimes();
       renderTimezoneCards();
       saveToLocalStorage();
+      console.log('Home timezone set to:', homeTimezone); // Debug
     }
 
     function toggleDateTimePicker() {
@@ -129,8 +137,6 @@
 
     function updateTimes() {
       const now = customDateTime ? new Date(customDateTime) : new Date();
-
-      // Update Home Time
       const homeNow = new Date(now.toLocaleString('en-US', { timeZone: homeTimezone }));
       document.getElementById('homeTime').textContent = new Intl.DateTimeFormat('en-US', {
         timeZone: homeTimezone,
@@ -141,7 +147,6 @@
       const homeCard = document.getElementById('homeTimezoneSection');
       homeCard.className = `home-timezone ${homeNow.getHours() >= 6 && homeNow.getHours() < 18 ? 'day' : 'night'}`;
 
-      // Update comparison timezone cards
       document.querySelectorAll('.timezone-card .time').forEach(el => {
         const tz = el.dataset.tz;
         const localNow = new Date(now.toLocaleString('en-US', { timeZone: tz }));
@@ -209,6 +214,8 @@
         }
       }
     }
+
+    document.getElementById('homeTimezone').addEventListener('change', setHomeTimezone);
 
     init();
   </script>
