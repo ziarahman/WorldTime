@@ -46,31 +46,23 @@
   <script>
     let timezones = [];
     let homeTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    let homeDisplay = homeTimezone;
     let selectedTimezones = [];
     let customDateTime = null;
 
-    // Subset of GeoNames "cities15000" data embedded for offline use
+    // Sample city data (replace with <script src="cities15000.js"></script> for full dataset)
     const cityTimezoneData = [
       { city: "Austin", country: "United States", timezone: "America/Chicago" },
       { city: "San Francisco", country: "United States", timezone: "America/Los_Angeles" },
       { city: "New Delhi", country: "India", timezone: "Asia/Kolkata" },
-      { city: "New York", country: "United States", timezone: "America/New_York" },
+      { city: "Singapore", country: "Singapore", timezone: "Asia/Singapore" },
       { city: "London", country: "United Kingdom", timezone: "Europe/London" },
       { city: "Tokyo", country: "Japan", timezone: "Asia/Tokyo" },
       { city: "Sydney", country: "Australia", timezone: "Australia/Sydney" },
-      { city: "Paris", country: "France", timezone: "Europe/Paris" },
-      { city: "Beijing", country: "China", timezone: "Asia/Shanghai" },
-      { city: "Moscow", country: "Russia", timezone: "Europe/Moscow" }
     ];
-
-    const timezoneToCity = {};
-    cityTimezoneData.forEach(item => {
-      timezoneToCity[item.timezone] = { city: item.city, country: item.country };
-    });
 
     function init() {
       timezones = Intl.supportedValuesOf('timeZone');
-      console.log('Timezones loaded:', timezones.length);
       populateTimezoneOptions();
       detectUserTimezone();
       loadSavedData();
@@ -79,7 +71,7 @@
     }
 
     function detectUserTimezone() {
-      document.getElementById('homeTimezone').value = homeTimezone;
+      document.getElementById('homeTimezone').value = homeDisplay;
       updateTimes();
     }
 
@@ -87,15 +79,15 @@
       const datalist = document.getElementById('timezoneOptions');
       datalist.innerHTML = '';
 
-      // Add city options from GeoNames subset
+      // Add city options
       cityTimezoneData.forEach(item => {
         const option = document.createElement('option');
-        option.value = item.timezone;
+        option.value = `${item.timezone}|${item.city}, ${item.country}`;
         option.textContent = `${item.city}, ${item.country} (${item.timezone})`;
         datalist.appendChild(option);
       });
 
-      // Add remaining IANA timezones (optional, remove if only cities are needed)
+      // Optionally add IANA timezones not covered by cities
       timezones.forEach(tz => {
         if (!cityTimezoneData.some(item => item.timezone === tz)) {
           const option = document.createElement('option');
@@ -104,52 +96,52 @@
           datalist.appendChild(option);
         }
       });
-
-      console.log('Datalist populated with', datalist.children.length, 'options');
     }
 
-    function resolveTimezone(input) {
-      const trimmedInput = input.trim().toLowerCase();
-      if (timezones.includes(input)) return input;
-      const cityMatch = cityTimezoneData.find(item => item.city.toLowerCase() === trimmedInput);
-      return cityMatch ? cityMatch.timezone : null;
+    function resolveInput(input) {
+      const parts = input.split('|');
+      if (parts.length === 2) {
+        const [tz, display] = parts;
+        if (timezones.includes(tz)) return { timezone: tz, display: display };
+      } else {
+        const trimmed = input.trim();
+        if (timezones.includes(trimmed)) return { timezone: trimmed, display: trimmed };
+        const cityMatch = cityTimezoneData.find(item => item.city.toLowerCase() === trimmed.toLowerCase());
+        if (cityMatch) return { timezone: cityMatch.timezone, display: `${cityMatch.city}, ${cityMatch.country}` };
+      }
+      return null;
     }
 
     function addTimezone() {
       const input = document.getElementById('timezoneInput');
-      const userInput = input.value.trim();
-      const tz = resolveTimezone(userInput);
-      if (tz && !selectedTimezones.includes(tz)) {
-        selectedTimezones.push(tz);
+      const resolved = resolveInput(input.value);
+      if (resolved && !selectedTimezones.some(item => item.timezone === resolved.timezone)) {
+        selectedTimezones.push(resolved);
         input.value = '';
         renderTimezoneCards();
         saveToLocalStorage();
-      } else {
-        console.log('Invalid or duplicate timezone:', userInput);
       }
     }
 
     function removeTimezone(tz) {
-      selectedTimezones = selectedTimezones.filter(item => item !== tz);
+      selectedTimezones = selectedTimezones.filter(item => item.timezone !== tz);
       renderTimezoneCards();
       saveToLocalStorage();
     }
 
     function setHomeTimezone() {
       const input = document.getElementById('homeTimezone');
-      const userInput = input.value.trim();
-      const tz = resolveTimezone(userInput);
-      if (!tz) {
+      const resolved = resolveInput(input.value);
+      if (!resolved) {
         alert('Invalid city or timezone. Please select from the list.');
-        input.value = homeTimezone;
+        input.value = homeDisplay;
         return;
       }
-      homeTimezone = tz;
-      customDateTime = new Date();
+      homeTimezone = resolved.timezone;
+      homeDisplay = resolved.display;
+      input.value = homeDisplay;
       updateTimes();
-      renderTimezoneCards();
       saveToLocalStorage();
-      console.log('Home timezone set to:', homeTimezone);
     }
 
     function toggleDateTimePicker() {
@@ -203,30 +195,23 @@
 
       document.querySelectorAll('.gmt-offset').forEach(span => {
         const tz = span.dataset.tz;
-        span.textContent = getTimezoneOffsetString(tz, customDateTime || new Date());
+        span.textContent = getTimezoneOffsetString(tz, now);
       });
     }
 
     function renderTimezoneCards() {
       const container = document.getElementById('timezoneList');
       container.innerHTML = '';
-
-      selectedTimezones.forEach(tz => {
+      selectedTimezones.forEach(item => {
         const card = document.createElement('div');
         card.className = 'timezone-card';
-        let displayText = tz.split('/').pop().replace(/_/g, ' ');
-        if (timezoneToCity[tz]) {
-          const { city, country } = timezoneToCity[tz];
-          displayText = `${city}, ${country}`;
-        }
         card.innerHTML = `
-          <button class="remove-btn" onclick="removeTimezone('${tz}')">×</button>
-          <h3>${displayText} <span class="gmt-offset" data-tz="${tz}"></span></h3>
-          <div class="time timezone-info" data-tz="${tz}"></div>
+          <button class="remove-btn" onclick="removeTimezone('${item.timezone}')">×</button>
+          <h3>${item.display} <span class="gmt-offset" data-tz="${item.timezone}"></span></h3>
+          <div class="time timezone-info" data-tz="${item.timezone}"></div>
         `;
         container.appendChild(card);
       });
-
       updateTimes();
     }
 
@@ -234,6 +219,7 @@
       const data = {
         selectedTimezones,
         homeTimezone,
+        homeDisplay,
         customDateTime: customDateTime ? customDateTime.toISOString() : null
       };
       localStorage.setItem('worldTimeData', JSON.stringify(data));
@@ -244,16 +230,13 @@
       if (savedData) {
         try {
           const data = JSON.parse(savedData);
-          if (data.selectedTimezones && Array.isArray(data.selectedTimezones)) {
-            selectedTimezones = data.selectedTimezones;
-          }
+          if (data.selectedTimezones && Array.isArray(data.selectedTimezones)) selectedTimezones = data.selectedTimezones;
           if (data.homeTimezone) {
             homeTimezone = data.homeTimezone;
-            document.getElementById('homeTimezone').value = homeTimezone;
+            homeDisplay = data.homeDisplay || homeTimezone;
+            document.getElementById('homeTimezone').value = homeDisplay;
           }
-          if (data.customDateTime) {
-            customDateTime = new Date(data.customDateTime);
-          }
+          if (data.customDateTime) customDateTime = new Date(data.customDateTime);
           renderTimezoneCards();
         } catch (e) {
           console.error('Error loading saved data:', e);
@@ -262,7 +245,6 @@
     }
 
     document.getElementById('homeTimezone').addEventListener('change', setHomeTimezone);
-
     init();
   </script>
 </body>
