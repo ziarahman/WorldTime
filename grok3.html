@@ -5,134 +5,169 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>World Time Comparison</title>
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    /* General body styling */
     body {
-      font-family: Arial, sans-serif;
-      padding: 10px;
       background-color: #f0f0f0;
+      font-family: Arial, sans-serif;
+      margin: 0;
     }
+
+    /* Main container */
     .container {
       max-width: 600px;
       margin: 0 auto;
+      padding: 20px;
     }
-    .header {
-      margin-bottom: 20px;
+
+    /* Title styling */
+    h1 {
+      font-size: 24px;
+      font-weight: bold;
+      color: #000;
+      text-align: center;
     }
+
+    /* Home Timezone section */
     .home-timezone {
-      padding: 15px;
-      border-radius: 10px;
-      margin-bottom: 15px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      transition: background 0.5s ease;
+      margin-top: 20px;
     }
-    .timezone-list {
-      padding-bottom: 10px;
+    .home-timezone label {
+      color: #000;
+      display: block;
     }
-    .timezone-card {
-      position: relative;
+    .home-timezone input {
+      background-color: #e0e0e0;
+      border: 1px solid #007bff;
+      padding: 5px;
       width: 100%;
+      border-radius: 5px;
+    }
+
+    /* Set Date & Time button */
+    .set-date-time {
+      background-color: #007bff;
+      color: #fff;
+      padding: 10px;
+      width: 100%;
+      border: none;
+      border-radius: 5px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+
+    /* Search field */
+    .search-field {
+      margin-top: 10px;
+    }
+    .search-field input {
+      background-color: #e0e0e0;
+      border: 1px solid #007bff;
+      padding: 5px;
+      width: 100%;
+      border-radius: 5px;
+    }
+
+    /* Modal overlay */
+    .modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: #333;
+      padding: 20px;
       border-radius: 10px;
-      padding: 15px;
+      border-top: 5px solid #28a745;
+      z-index: 1000;
+      text-align: center;
+      display: none;
+    }
+    .modal p {
+      color: #fff;
       margin-bottom: 10px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      transition: background 0.5s ease;
+    }
+    .modal button {
+      background-color: #007bff;
+      color: #fff;
+      padding: 5px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    /* Timezone cards container */
+    #timezoneCards {
+      margin-top: 20px;
+    }
+
+    /* Timezone card styling */
+    .timezone-card {
+      background-color: #fff;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 5px;
+      position: relative;
     }
     .remove-btn {
       position: absolute;
-      top: 35%;
-      left: 47%;
-      margin: 2px;
+      top: 5px;
+      right: 5px;
       background: none;
       border: none;
       font-size: 20px;
       cursor: pointer;
-      color: red;
-      font-weight: bold;
-      z-index: 10;
-    }
-    .day {
-      background: linear-gradient(135deg, #87CEEB, #E0F6FF);
-      color: #333;
-    }
-    .night {
-      background: linear-gradient(135deg, #1a237e, #0d1b2a);
-      color: white;
-    }
-    .controls {
-      margin: 15px 0;
-    }
-    input, button {
-      padding: 8px;
-      margin: 5px 0;
-      border-radius: 5px;
-      border: 1px solid #ddd;
-      font-size: 14px;
-      width: 100%;
-    }
-    button {
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-    .timezone-info {
-      margin: 10px 0;
-    }
-    .set-btn {
-      margin-left: 10px;
-      padding: 5px 10px;
-      font-size: 12px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      cursor: pointer;
-      border-radius: 5px;
-    }
-    .time {
-      transition: opacity 0.5s ease-in-out;
     }
   </style>
 </head>
 <body>
+  <!-- Main content -->
   <div class="container">
-    <div class="header">
-      <h1>World Time Comparison</h1>
-      <div class="home-timezone" id="homeTimezoneSection">
-        <strong>Home Timezone:</strong>
-        <input id="homeTimezone" list="timezoneOptions" placeholder="Search city..." onchange="setHomeTimezone(this.value)">
-        <datalist id="timezoneOptions"></datalist>
-        <div id="homeCityDisplay" style="margin: 5px 0;"></div>
-        <div id="homeTime" class="timezone-info"></div>
-        <button class="set-btn" onclick="toggleDateTimePicker()">SET DATE & TIME</button>
-        <input type="datetime-local" id="homeDateTimePicker" style="display:none;" onchange="setCustomTime()">
-      </div>
-      <div class="controls">
-        <input id="timezoneInput" list="timezoneOptions" placeholder="Search city to compare...">
-        <button onclick="addTimezone()">Add City to Compare</button>
-      </div>
+    <h1>World Time Comparison</h1>
+    
+    <!-- Home Timezone section -->
+    <div class="home-timezone">
+      <label>Home Timezone:</label>
+      <input id="homeTimezone" list="citiesDatalist" placeholder="Select home city..." onchange="setHomeTimezone(this.value)">
+      <datalist id="citiesDatalist"></datalist>
+      <div id="homeCityDisplay"></div>
     </div>
-    <div class="timezone-list" id="timezoneList"></div>
+    
+    <!-- Set Date & Time button -->
+    <button class="set-date-time" onclick="toggleDateTimePicker()">SET DATE & TIME</button>
+    <input type="datetime-local" id="homeDateTimePicker" style="display:none;" onchange="setCustomTime()">
+    
+    <!-- Search field -->
+    <div class="search-field">
+      <input id="timezoneInput" list="citiesDatalist" placeholder="Search city to compare...">
+    </div>
+    
+    <!-- Add Timezone button -->
+    <button onclick="addTimezone()">Add Timezone to Compare</button>
+    
+    <!-- Timezone cards -->
+    <div id="timezoneCards"></div>
+  </div>
+  
+  <!-- Modal overlay -->
+  <div class="modal" id="errorModal">
+    <p id="errorMessage">Invalid city selection.</p>
+    <button onclick="closeModal()">OK</button>
   </div>
 
   <script>
-    // Global variables
     let citiesMap = new Map();
     let homeCity = null;
     let selectedCities = [];
     let customDateTime = null;
 
-    // Load cities from CDN
+    // Load cities from alternative CDN
     async function loadCities() {
       try {
-        const response = await fetch('https://cdn.jsdelivr.net/gh/dr5hn/countries-states-cities-database@master/cities.json');
+        const response = await fetch('https://cdn.jsdelivr.net/gh/kelvins/cities-with-timezones@master/cities.json');
         const data = await response.json();
         return data;
       } catch (error) {
         console.error('Error fetching cities data:', error);
+        showError('Failed to load city data. Please try again later.');
         return [];
       }
     }
@@ -140,81 +175,72 @@
     // Initialize the application
     async function init() {
       const citiesData = await loadCities();
-      citiesMap = new Map(citiesData.map(city => [city.id, city]));
-
-      // Calculate unique timezone offsets
-      const uniqueTimezones = new Set(citiesData.map(city => city.timezone));
-      const timezoneOffsets = {};
-      uniqueTimezones.forEach(tz => {
-        timezoneOffsets[tz] = getTimezoneOffsetString(tz);
-      });
-
-      // Populate datalist with city options
-      const datalist = document.getElementById('timezoneOptions');
+      citiesMap = new Map(citiesData.map(city => [`${city.city}, ${city.country}`, city]));
+      const datalist = document.getElementById('citiesDatalist');
       datalist.innerHTML = '';
       citiesData.forEach(city => {
         const option = document.createElement('option');
-        option.value = city.id;
-        option.textContent = `${city.name}, ${city.timezone} ${timezoneOffsets[city.timezone]}`;
+        option.value = `${city.city}, ${city.country}`;
+        option.textContent = `${city.city}, ${city.country}, ${city.timezone} ${getTimezoneOffsetString(city.timezone)}`;
         datalist.appendChild(option);
       });
-
-      detectUserTimezone();
       loadSavedData();
-      setInterval(updateTimes, 1000);
+      detectUserTimezone();
       updateTimes();
+      setInterval(updateTimes, 1000);
     }
 
-    // Detect user's timezone and set a matching city
+    // Detect user's timezone and set a default city
     function detectUserTimezone() {
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       for (let city of citiesMap.values()) {
         if (city.timezone === userTimezone) {
           homeCity = city;
-          document.getElementById('homeTimezone').value = city.id;
-          document.getElementById('homeCityDisplay').textContent = `Home: ${homeCity.name}, ${homeCity.timezone}`;
+          document.getElementById('homeTimezone').value = `${homeCity.city}, ${homeCity.country}`;
+          document.getElementById('homeCityDisplay').textContent = `Home: ${homeCity.city}, ${homeCity.country}, ${homeCity.timezone}`;
           break;
         }
       }
       if (!homeCity) {
         homeCity = citiesMap.values().next().value; // Fallback to first city
-        document.getElementById('homeTimezone').value = homeCity.id;
-        document.getElementById('homeCityDisplay').textContent = `Home: ${homeCity.name}, ${homeCity.timezone}`;
+        document.getElementById('homeTimezone').value = `${homeCity.city}, ${homeCity.country}`;
+        document.getElementById('homeCityDisplay').textContent = `Home: ${homeCity.city}, ${homeCity.country}, ${homeCity.timezone}`;
       }
       updateTimes();
     }
 
     // Set home city based on selection
-    function setHomeTimezone(cityId) {
-      const city = citiesMap.get(parseInt(cityId));
+    function setHomeTimezone(cityKey) {
+      const city = citiesMap.get(cityKey);
       if (city) {
         homeCity = city;
-        document.getElementById('homeCityDisplay').textContent = `Home: ${homeCity.name}, ${homeCity.timezone}`;
+        document.getElementById('homeCityDisplay').textContent = `Home: ${homeCity.city}, ${homeCity.country}, ${homeCity.timezone}`;
         customDateTime = new Date();
         updateTimes();
-        renderTimezoneCards();
         saveToLocalStorage();
       } else {
-        alert('Invalid city selection.');
+        showError('Invalid city selection.');
       }
     }
 
     // Add a city to compare
     function addTimezone() {
       const input = document.getElementById('timezoneInput');
-      const cityId = parseInt(input.value);
-      const city = citiesMap.get(cityId);
-      if (city && !selectedCities.some(c => c.id === cityId)) {
+      const cityKey = input.value;
+      const city = citiesMap.get(cityKey);
+      if (city && !selectedCities.some(c => `${c.city}, ${c.country}` === cityKey)) {
         selectedCities.push(city);
         input.value = '';
         renderTimezoneCards();
         saveToLocalStorage();
+      } else {
+        showError('Invalid city selection or city already added.');
       }
     }
 
     // Remove a city from comparison
-    function removeTimezone(cityId) {
-      selectedCities = selectedCities.filter(city => city.id !== cityId);
+    function removeTimezone(cityKey) {
+      selectedCities = selectedCities.filter(city => `${city.city}, ${city.country}` !== cityKey);
       renderTimezoneCards();
       saveToLocalStorage();
     }
@@ -252,16 +278,14 @@
 
       // Update home time
       const homeNow = new Date(now.toLocaleString('en-US', { timeZone: homeCity.timezone }));
-      document.getElementById('homeTime').innerHTML = `
-        <strong>${homeCity.name} (${homeCity.timezone} ${getTimezoneOffsetString(homeCity.timezone, now)})</strong><br>
+      document.getElementById('homeCityDisplay').innerHTML = `
+        <strong>${homeCity.city}, ${homeCity.country} (${homeCity.timezone} ${getTimezoneOffsetString(homeCity.timezone, now)})</strong><br>
         ${new Intl.DateTimeFormat('en-US', {
           timeZone: homeCity.timezone,
           dateStyle: 'full',
           timeStyle: 'long'
         }).format(now)}
       `;
-      const homeCard = document.getElementById('homeTimezoneSection');
-      homeCard.className = `home-timezone ${homeNow.getHours() >= 6 && homeNow.getHours() < 18 ? 'day' : 'night'}`;
 
       // Update comparison cities
       document.querySelectorAll('.timezone-card .time').forEach(el => {
@@ -272,8 +296,6 @@
           dateStyle: 'full',
           timeStyle: 'long'
         }).format(now);
-        const card = el.closest('.timezone-card');
-        card.className = `timezone-card ${localNow.getHours() >= 6 && localNow.getHours() < 18 ? 'day' : 'night'}`;
       });
 
       // Update GMT offsets
@@ -285,14 +307,14 @@
 
     // Render comparison city cards
     function renderTimezoneCards() {
-      const container = document.getElementById('timezoneList');
+      const container = document.getElementById('timezoneCards');
       container.innerHTML = '';
       selectedCities.forEach(city => {
         const card = document.createElement('div');
         card.className = 'timezone-card';
         card.innerHTML = `
-          <button class="remove-btn" onclick="removeTimezone(${city.id})">×</button>
-          <h3>${city.name} (${city.timezone}) <span class="gmt-offset" data-tz="${city.timezone}"></span></h3>
+          <button class="remove-btn" onclick="removeTimezone('${city.city}, ${city.country}')">×</button>
+          <h3>${city.city}, ${city.country} (${city.timezone}) <span class="gmt-offset" data-tz="${city.timezone}"></span></h3>
           <div class="time timezone-info" data-tz="${city.timezone}"></div>
         `;
         container.appendChild(card);
@@ -303,8 +325,8 @@
     // Save to local storage
     function saveToLocalStorage() {
       const data = {
-        selectedCities: selectedCities.map(city => city.id),
-        homeCityId: homeCity ? homeCity.id : null,
+        selectedCities: selectedCities.map(city => `${city.city}, ${city.country}`),
+        homeCityKey: homeCity ? `${homeCity.city}, ${homeCity.country}` : null,
         customDateTime: customDateTime ? customDateTime.toISOString() : null
       };
       localStorage.setItem('worldTimeData', JSON.stringify(data));
@@ -312,28 +334,32 @@
 
     // Load from local storage
     function loadSavedData() {
-      const savedData = localStorage.getItem('worldTimeData');
-      if (savedData) {
-        try {
-          const data = JSON.parse(savedData);
-          if (data.selectedCities && Array.isArray(data.selectedCities)) {
-            selectedCities = data.selectedCities.map(id => citiesMap.get(id)).filter(city => city);
-          }
-          if (data.homeCityId) {
-            homeCity = citiesMap.get(data.homeCityId);
-            if (homeCity) {
-              document.getElementById('homeTimezone').value = homeCity.id;
-              document.getElementById('homeCityDisplay').textContent = `Home: ${homeCity.name}, ${homeCity.timezone}`;
-            }
-          }
-          if (data.customDateTime) {
-            customDateTime = new Date(data.customDateTime);
-          }
-          renderTimezoneCards();
-        } catch (e) {
-          console.error('Error loading saved data:', e);
+      const data = JSON.parse(localStorage.getItem('worldTimeData')) || {};
+      if (data.selectedCities && Array.isArray(data.selectedCities)) {
+        selectedCities = data.selectedCities.map(key => citiesMap.get(key)).filter(city => city);
+      }
+      if (data.homeCityKey) {
+        homeCity = citiesMap.get(data.homeCityKey);
+        if (homeCity) {
+          document.getElementById('homeTimezone').value = `${homeCity.city}, ${homeCity.country}`;
+          document.getElementById('homeCityDisplay').textContent = `Home: ${homeCity.city}, ${homeCity.country}, ${homeCity.timezone}`;
         }
       }
+      if (data.customDateTime) {
+        customDateTime = new Date(data.customDateTime);
+      }
+      renderTimezoneCards();
+    }
+
+    // Show error modal
+    function showError(message) {
+      document.getElementById('errorMessage').textContent = message;
+      document.getElementById('errorModal').style.display = 'block';
+    }
+
+    // Close error modal
+    function closeModal() {
+      document.getElementById('errorModal').style.display = 'none';
     }
 
     // Start the application
