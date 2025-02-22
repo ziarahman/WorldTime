@@ -29,14 +29,14 @@
       <h1>World Time Comparison</h1>
       <div class="home-timezone" id="homeTimezoneSection">
         <strong>Home Timezone:</strong>
-        <input id="homeTimezone" list="timezoneOptions" placeholder="Search timezone..." oninput="this.value = this.value.trim()">
+        <input id="homeTimezone" list="timezoneOptions" placeholder="Search city or timezone..." oninput="this.value = this.value.trim()">
         <datalist id="timezoneOptions"></datalist>
         <div id="homeTime" class="timezone-info"></div>
         <button class="set-btn" onclick="toggleDateTimePicker()">SET DATE & TIME</button>
         <input type="datetime-local" id="homeDateTimePicker" style="display:none;" onchange="setCustomTime()">
       </div>
       <div class="controls">
-        <input id="timezoneInput" list="timezoneOptions" placeholder="Search timezone to compare..." oninput="this.value = this.value.trim()">
+        <input id="timezoneInput" list="timezoneOptions" placeholder="Search city or timezone to compare..." oninput="this.value = this.value.trim()">
         <button onclick="addTimezone()">Add Timezone to Compare</button>
       </div>
     </div>
@@ -49,9 +49,23 @@
     let selectedTimezones = [];
     let customDateTime = null;
 
+    // Custom city-to-timezone mapping (expand as needed)
+    const cityToTimezoneMap = {
+      "Austin": "America/Chicago",
+      "San Francisco": "America/Los_Angeles",
+      "Delhi": "Asia/Kolkata",
+      "New York": "America/New_York",
+      "London": "Europe/London",
+      "Tokyo": "Asia/Tokyo",
+      "Sydney": "Australia/Sydney",
+      "Paris": "Europe/Paris",
+      "Beijing": "Asia/Shanghai",
+      "Moscow": "Europe/Moscow"
+    };
+
     function init() {
       timezones = Intl.supportedValuesOf('timeZone');
-      console.log('Timezones loaded:', timezones.length); // Debug
+      console.log('Timezones loaded:', timezones.length);
       populateTimezoneOptions();
       detectUserTimezone();
       loadSavedData();
@@ -67,25 +81,51 @@
     function populateTimezoneOptions() {
       const datalist = document.getElementById('timezoneOptions');
       datalist.innerHTML = '';
-      timezones.forEach(tz => {
+
+      // Add city options
+      Object.entries(cityToTimezoneMap).forEach(([city, tz]) => {
         const option = document.createElement('option');
-        option.value = tz;
-        option.textContent = tz; // No country info without dependencies
+        option.value = tz; // Use IANA timezone as value for consistency
+        option.textContent = `${city} (${tz})`; // Display city and timezone
         datalist.appendChild(option);
       });
-      console.log('Datalist populated with', datalist.children.length, 'options'); // Debug
+
+      // Add all IANA timezones (optional, remove if you only want cities)
+      timezones.forEach(tz => {
+        if (!Object.values(cityToTimezoneMap).includes(tz)) { // Avoid duplicates
+          const option = document.createElement('option');
+          option.value = tz;
+          option.textContent = tz;
+          datalist.appendChild(option);
+        }
+      });
+
+      console.log('Datalist populated with', datalist.children.length, 'options');
+    }
+
+    function resolveTimezone(input) {
+      const trimmedInput = input.trim().toLowerCase();
+      // Check if input matches a city in the map
+      for (const [city, tz] of Object.entries(cityToTimezoneMap)) {
+        if (city.toLowerCase() === trimmedInput) {
+          return tz;
+        }
+      }
+      // If not a city, assume it's an IANA timezone
+      return timezones.includes(input) ? input : null;
     }
 
     function addTimezone() {
       const input = document.getElementById('timezoneInput');
-      const tz = input.value.trim();
-      if (timezones.includes(tz) && !selectedTimezones.includes(tz)) {
+      const userInput = input.value.trim();
+      const tz = resolveTimezone(userInput);
+      if (tz && !selectedTimezones.includes(tz)) {
         selectedTimezones.push(tz);
         input.value = '';
         renderTimezoneCards();
         saveToLocalStorage();
       } else {
-        console.log('Invalid or duplicate timezone:', tz); // Debug
+        console.log('Invalid or duplicate timezone:', userInput);
       }
     }
 
@@ -97,9 +137,10 @@
 
     function setHomeTimezone() {
       const input = document.getElementById('homeTimezone');
-      const tz = input.value.trim();
-      if (!timezones.includes(tz)) {
-        alert('Invalid timezone. Please select from the list.');
+      const userInput = input.value.trim();
+      const tz = resolveTimezone(userInput);
+      if (!tz) {
+        alert('Invalid city or timezone. Please select from the list.');
         input.value = homeTimezone;
         return;
       }
@@ -108,7 +149,7 @@
       updateTimes();
       renderTimezoneCards();
       saveToLocalStorage();
-      console.log('Home timezone set to:', homeTimezone); // Debug
+      console.log('Home timezone set to:', homeTimezone);
     }
 
     function toggleDateTimePicker() {
@@ -173,9 +214,11 @@
       selectedTimezones.forEach(tz => {
         const card = document.createElement('div');
         card.className = 'timezone-card';
+        // Find city name if it exists in the map
+        const city = Object.keys(cityToTimezoneMap).find(key => cityToTimezoneMap[key] === tz) || tz.split('/').pop().replace(/_/g, ' ');
         card.innerHTML = `
           <button class="remove-btn" onclick="removeTimezone('${tz}')">×</button>
-          <h3>${tz.split('/').pop().replace(/_/g, ' ')} <span class="gmt-offset" data-tz="${tz}"></span></h3>
+          <h3>${city} <span class="gmt-offset" data-tz="${tz}"></span></h3>
           <div class="time timezone-info" data-tz="${tz}"></div>
         `;
         container.appendChild(card);
